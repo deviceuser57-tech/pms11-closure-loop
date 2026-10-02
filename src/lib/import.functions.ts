@@ -15,7 +15,7 @@ export const runImport = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Only Admins can import workbook data");
-    const { buildAll, buildPreview, rejectedKeys } = await import("./import.server");
+    const { buildAll, buildPreview, rejectedKeys, toDatabaseRecord } = await import("./import.server");
     const all = buildAll();
     const rej = rejectedKeys(all);
     const seenKeys = new Set<string>();
@@ -27,7 +27,7 @@ export const runImport = createServerFn({ method: "POST" })
     });
     let inserted = 0;
     for (let i = 0; i < rows.length; i += 200) {
-      const chunk = rows.slice(i, i + 200);
+      const chunk = rows.slice(i, i + 200).map(toDatabaseRecord);
       const { data: res, error } = await context.supabase
         .from("records")
         .upsert(chunk as never, { onConflict: "entity,rid", ignoreDuplicates: true })
