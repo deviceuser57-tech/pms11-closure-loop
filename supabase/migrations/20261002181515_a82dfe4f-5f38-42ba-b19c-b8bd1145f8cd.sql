@@ -1,0 +1,2 @@
+revoke execute on function public.has_role(uuid, app_role), public.can_edit(uuid), public.can_review(uuid), public.handle_new_user(), public.evidence_reopen(), public.audit_records(), public.expire_evidence() from public, anon;
+revoke execute on function public.handle_new_user(), public.evidence_reopen(), public.audit_records() from authenticated;
