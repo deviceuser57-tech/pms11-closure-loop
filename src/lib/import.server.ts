@@ -3,10 +3,51 @@ import { buildDerived, RECONCILIATION, type SeedRecord } from "./seed/derived";
 
 const EVIDENCE_STATUS: Record<string, string> = { "Missing / To Verify": "Required", Missing: "Required" };
 const PLACEHOLDER = /to be assigned|^tbc|^rule\/wps owner$/i;
+const ARRAY_FIELDS = ["evidence_ids", "acceptance_ids", "rule_ids", "links"] as const;
+const OPTIONAL_TEXT_FIELDS = ["description", "wps_id", "gate_id", "parent_id", "owner", "reviewer", "approver", "criticality", "applicability", "doc_number", "revision", "issuer"] as const;
+const DATE_FIELDS = ["due_date", "expiry_date"] as const;
+
+/** Normalize source/workbook records at the database boundary without inventing business data. */
+export function normalizeRecord(input: SeedRecord): SeedRecord {
+  const rec = { ...input } as SeedRecord & Record<string, unknown>;
+  for (const key of ARRAY_FIELDS) {
+    const value = rec[key];
+    rec[key] = Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.trim().length > 0) : [];
+  }
+  for (const key of OPTIONAL_TEXT_FIELDS) {
+    const value = rec[key];
+    if (value == null || (typeof value === "string" && value.trim() === "")) delete rec[key];
+  }
+  for (const key of DATE_FIELDS) {
+    const value = rec[key];
+    if (value == null || (typeof value === "string" && value.trim() === "")) delete rec[key];
+  }
+  if (rec.data == null || typeof rec.data !== "object" || Array.isArray(rec.data)) rec.data = {};
+  if (rec.status == null || (typeof rec.status === "string" && rec.status.trim() === "")) delete rec.status;
+  if (typeof rec.title === "string") rec.title = rec.title.trim();
+  if (typeof rec.entity === "string") rec.entity = rec.entity.trim();
+  if (typeof rec.rid === "string") rec.rid = rec.rid.trim();
+  if (rec.source_kind == null || (typeof rec.source_kind === "string" && rec.source_kind.trim() === "")) rec.source_kind = "imported";
+  return rec;
+}
+
+/** Explicit DB insert shape: omit undefined nullable fields and always send required arrays/data. */
+export function toDatabaseRecord(r: SeedRecord): Record<string, unknown> {
+  const n = normalizeRecord(r);
+  return {
+    entity: n.entity, rid: n.rid, title: n.title, description: n.description,
+    wps_id: n.wps_id, gate_id: n.gate_id, parent_id: n.parent_id, status: n.status,
+    owner: n.owner, reviewer: n.reviewer, approver: n.approver, due_date: n.due_date,
+    expiry_date: n.expiry_date, criticality: n.criticality, source_kind: n.source_kind,
+    applicability: n.applicability, evidence_ids: n.evidence_ids ?? [],
+    acceptance_ids: n.acceptance_ids ?? [], rule_ids: n.rule_ids ?? [], links: n.links ?? [],
+    doc_number: n.doc_number, revision: n.revision, issuer: n.issuer, data: n.data ?? {},
+  };
+}
 
 export function buildAll(): SeedRecord[] {
   const imported = (workbook as SeedRecord[]).map((r) => {
-    const rec: SeedRecord = { ...r, data: { ...r.data } };
+    const rec: SeedRecord = normalizeRecord({ ...r, data: { ...(r.data ?? {}) } });
     if (rec.entity === "evidence" && rec.status && EVIDENCE_STATUS[rec.status]) {
       rec.data["Workbook Status"] = rec.status;
       rec.status = EVIDENCE_STATUS[rec.status];
@@ -21,7 +62,7 @@ export function buildAll(): SeedRecord[] {
     if (!rec.applicability && typeof rec.data["Applicability Status"] === "string") rec.applicability = rec.data["Applicability Status"] as string;
     return rec;
   });
-  return [...imported, ...buildDerived()];
+  return [...imported, ...buildDerived().map(normalizeRecord)];
 }
 
 export const ENTITY_SOURCES: Record<string, string> = {
@@ -91,6 +132,11 @@ export function validateRows(all: SeedRecord[]): RowIssue[] {
     if (!r.rid || !/^[A-Z]/.test(r.rid)) errors.push("Missing or invalid ID");
     if ((seen.get(`${r.entity}:${r.rid}`) ?? 0) > 1) errors.push("Duplicate ID");
     if (!r.title || r.title === r.rid) errors.push("Missing title");
+    if (!r.entity) errors.push("Missing entity");
+    if (!r.source_kind) errors.push("Missing source_kind");
+    if (r.data == null || typeof r.data !== "object" || Array.isArray(r.data)) errors.push("Invalid data object");
+    for (const k of DATE_FIELDS) if (r[k] && Number.isNaN(Date.parse(r[k]!))) errors.push(`Invalid ${k}`);
+    for (const k of ARRAY_FIELDS) if (!Array.isArray(r[k])) errors.push(`Invalid ${k}: expected array`);
     for (const k of ["due_date", "expiry_date"] as const) if (r[k] && Number.isNaN(Date.parse(r[k]!))) errors.push(`Invalid ${k}`);
     if (["rule", "wps", "activity", "task", "gap", "deliverable"].includes(r.entity)) {
       if (!r.owner || PLACEHOLDER.test(r.owner)) warns.push("No named owner");
