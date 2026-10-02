@@ -8,3 +8,6 @@
 - [ ] Rules, WPS, Gaps/CAPA, Evidence (uploads), Gates, Registers
 - [ ] Closure tracker for findings (owner, due, status, evidence)
 - [ ] Audit trail + reports, Excel/PDF export
+- [ ] Import preview with row-level validation errors + download rejected/flagged rows
+- [ ] Findings filters: vessel, owner, due date (overdue), status (blocked)
+- [ ] Audit history: owners, due dates, statuses, evidence links on findings
