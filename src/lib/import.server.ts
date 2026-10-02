@@ -64,7 +64,10 @@ export function buildPreview() {
     for (const ev of r.evidence_ids ?? []) if (!ids.has(`evidence:${ev}`)) { missingEvidenceRefs++; f("Broken evidence reference"); }
     for (const ac of r.acceptance_ids ?? []) if (!ids.has(`acceptance:${ac}`)) { missingAcceptanceRefs++; f("Broken acceptance reference"); }
   }
+  const rowIssues = validateRows(all);
   return {
+    rowIssues,
+    rejectedCount: rowIssues.filter((r) => r.severity === "error").length,
     workbook: "PMS11_POWERPIVOT_READY.xlsm",
     config: { expectedWps: 24, expectedRules: 89 },
     found: { wps: all.filter((r) => r.entity === "wps" && r.source_kind === "imported").length, rules: all.filter((r) => r.entity === "rule").length },
@@ -73,4 +76,38 @@ export function buildPreview() {
     missingEvidenceRefs, missingAcceptanceRefs,
     notImported: NOT_IMPORTED,
   };
+}
+
+export type RowIssue = { entity: string; rid: string; title: string; source: string; severity: "error" | "warning"; issues: string[]; data: Record<string, unknown> };
+
+export function validateRows(all: SeedRecord[]): RowIssue[] {
+  const ids = new Set(all.map((r) => `${r.entity}:${r.rid}`));
+  const seen = new Map<string, number>();
+  for (const r of all) seen.set(`${r.entity}:${r.rid}`, (seen.get(`${r.entity}:${r.rid}`) ?? 0) + 1);
+  const out: RowIssue[] = [];
+  for (const r of all) {
+    const errors: string[] = [];
+    const warns: string[] = [];
+    if (!r.rid || !/^[A-Z]/.test(r.rid)) errors.push("Missing or invalid ID");
+    if ((seen.get(`${r.entity}:${r.rid}`) ?? 0) > 1) errors.push("Duplicate ID");
+    if (!r.title || r.title === r.rid) errors.push("Missing title");
+    for (const k of ["due_date", "expiry_date"] as const) if (r[k] && Number.isNaN(Date.parse(r[k]!))) errors.push(`Invalid ${k}`);
+    if (["rule", "wps", "activity", "task", "gap", "deliverable"].includes(r.entity)) {
+      if (!r.owner || PLACEHOLDER.test(r.owner)) warns.push("No named owner");
+      if (!r.evidence_ids?.length) warns.push("No evidence linked");
+      if (!r.acceptance_ids?.length) warns.push("No acceptance criteria");
+    }
+    if (r.entity === "evidence" && (!r.doc_number || r.doc_number === "TBC")) warns.push("Document number TBC");
+    const brokenE = (r.evidence_ids ?? []).filter((e) => !ids.has(`evidence:${e}`));
+    if (brokenE.length) warns.push(`Unmatched evidence: ${brokenE.join(", ")}`);
+    const brokenA = (r.acceptance_ids ?? []).filter((a) => !ids.has(`acceptance:${a}`));
+    if (brokenA.length) warns.push(`Unmatched acceptance: ${brokenA.join(", ")}`);
+    if (errors.length || warns.length)
+      out.push({ entity: r.entity, rid: r.rid, title: r.title, source: r.source_kind, severity: errors.length ? "error" : "warning", issues: [...errors, ...warns], data: r.data });
+  }
+  return out;
+}
+
+export function rejectedKeys(all: SeedRecord[]) {
+  return new Set(validateRows(all).filter((r) => r.severity === "error").map((r) => `${r.entity}:${r.rid}`));
 }
