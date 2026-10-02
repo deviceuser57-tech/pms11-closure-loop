@@ -1,0 +1,145 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StatusBadge, SourceBadge } from "@/components/badges";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { blockers, CLOSABLE, ENTITY_LABEL, isExpired, statusOptions, useInvalidateRecords, useRecords, type Rec } from "@/lib/records";
+
+const Ctx = createContext<{ open: (id: string) => void }>({ open: () => {} });
+export const useRecordSheet = () => useContext(Ctx);
+
+export function RecordSheetProvider({ children }: { children: ReactNode }) {
+  const [id, setId] = useState<string | null>(null);
+  return (
+    <Ctx.Provider value={{ open: setId }}>
+      {children}
+      <Sheet open={!!id} onOpenChange={(o) => !o && setId(null)}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">{id && <Detail id={id} />}</SheetContent>
+      </Sheet>
+    </Ctx.Provider>
+  );
+}
+
+const L = ({ children }: { children: ReactNode }) => <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">{children}</Label>;
+
+function Detail({ id }: { id: string }) {
+  const { all, get } = useRecords();
+  const { canEdit, canReview, user } = useAuth();
+  const inval = useInvalidateRecords();
+  const sheet = useRecordSheet();
+  const r = all.find((x) => x.id === id);
+  const [f, setF] = useState<Partial<Rec>>({});
+  useEffect(() => { if (r) setF({ owner: r.owner, due_date: r.due_date, status: r.status, execution_note: r.execution_note, expiry_date: r.expiry_date, doc_number: r.doc_number, revision: r.revision, issuer: r.issuer, no_go_active: r.no_go_active }); }, [r?.id, r?.updated_at]);
+  const reviews = useQuery({ queryKey: ["reviews", id], queryFn: async () => (await supabase.from("reviews").select("*").eq("record_id", id).order("created_at", { ascending: false })).data ?? [] });
+  const files = useQuery({ queryKey: ["files", id], queryFn: async () => (await supabase.from("evidence_files").select("*").eq("record_id", id).order("created_at", { ascending: false })).data ?? [] });
+  const [comment, setComment] = useState("");
+  const [evText, setEvText] = useState("");
+  if (!r) return null;
+  const bl = CLOSABLE.includes(r.entity) ? blockers(r, get) : [];
+
+  const save = async (patch: Partial<Rec>) => {
+    const { error } = await supabase.from("records").update(patch as never).eq("id", r.id);
+    if (error) return toast.error(error.message);
+    toast.success("Saved");
+    inval();
+  };
+  const review = async (decision: string) => {
+    const kind = r.entity === "gate" ? "gate" : "review";
+    const { error } = await supabase.from("reviews").insert({ record_id: r.id, decision, comment, kind, reviewer_name: user?.email } as never);
+    if (error) return toast.error(error.message);
+    const patch: Partial<Rec> = r.entity === "gate" ? { status: decision, no_go_active: decision === "No-Go" } : r.entity === "evidence" ? { status: decision === "Approved" ? "Accepted" : "Rejected", review_status: decision } : { review_status: decision };
+    await save(patch);
+    setComment("");
+    reviews.refetch();
+  };
+  const upload = async (file: File) => {
+    const path = `${r.entity}/${r.rid}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("evidence").upload(path, file);
+    if (error) return toast.error(error.message);
+    await supabase.from("evidence_files").insert({ record_id: r.id, path, filename: file.name, size: file.size } as never);
+    if (r.entity === "evidence" && r.status === "Required") await save({ status: "Submitted" });
+    files.refetch();
+    toast.success("Uploaded");
+  };
+  const openFile = async (path: string) => {
+    const { data } = await supabase.storage.from("evidence").createSignedUrl(path, 300);
+    if (data) window.open(data.signedUrl, "_blank");
+  };
+  const linked = (ids: string[], entity: string) => (
+    <div className="flex flex-wrap gap-1.5">
+      {ids.length ? ids.map((x) => { const t = get(entity, x); return (
+        <button key={x} disabled={!t} onClick={() => t && sheet.open(t.id)} className="flex items-center gap-1 rounded-sm border border-border px-1.5 py-0.5 text-xs hover:bg-accent disabled:opacity-50">
+          <span className="rid">{x}</span>{t ? <StatusBadge value={isExpired(t) ? "Expired" : t.status} /> : <span className="text-destructive">unmatched</span>}
+        </button>); }) : <span className="text-xs text-muted-foreground">None linked</span>}
+    </div>
+  );
+
+  return (
+    <div className="space-y-5 pb-10">
+      <SheetHeader>
+        <div className="flex items-center gap-2"><span className="rid">{r.rid}</span><span className="label-caps">{ENTITY_LABEL[r.entity]}</span><SourceBadge kind={r.source_kind} /></div>
+        <SheetTitle className="font-display text-2xl leading-tight">{r.title}</SheetTitle>
+        {r.description && <p className="text-sm text-muted-foreground">{r.description}</p>}
+        <div className="flex flex-wrap gap-2 text-xs"><StatusBadge value={r.status} />{r.applicability && <StatusBadge value={r.applicability} />}<StatusBadge value={`Review: ${r.review_status}`} />{r.wps_id && <span className="rid">{r.wps_id}</span>}{r.gate_id && <span className="rid">{r.gate_id}</span>}</div>
+      </SheetHeader>
+
+      {typeof r.data["PMS-11 Scope Reconciliation"] === "string" && (
+        <div className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm"><p className="label-caps mb-1 text-primary">PMS-11 scope reconciliation (derived)</p>{r.data["PMS-11 Scope Reconciliation"] as string}</div>
+      )}
+
+      {CLOSABLE.includes(r.entity) && r.status !== "Closed" && (
+        <div className={`rounded-md border p-3 text-sm ${bl.length ? "border-destructive/40 bg-destructive/5" : "border-success/40 bg-success/5"}`}>
+          <p className="label-caps mb-1">Closure check</p>
+          {bl.length ? <ul className="list-disc pl-5 text-xs">{bl.map((b) => <li key={b}>{b}</li>)}</ul> : <p className="text-xs text-success">All closure conditions met — item can be closed.</p>}
+        </div>
+      )}
+
+      <section className="grid grid-cols-2 gap-4">
+        <div className="space-y-1"><L>Owner *</L><Input disabled={!canEdit} value={f.owner ?? ""} onChange={(e) => setF({ ...f, owner: e.target.value })} /></div>
+        <div className="space-y-1"><L>Due date</L><Input type="date" disabled={!canEdit} value={f.due_date ?? ""} onChange={(e) => setF({ ...f, due_date: e.target.value || null })} /></div>
+        <div className="space-y-1"><L>Status</L>
+          <Select disabled={!canEdit} value={f.status ?? ""} onValueChange={(v) => setF({ ...f, status: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{[...new Set([r.status, ...statusOptions(r.entity)])].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        {r.entity === "evidence" && <>
+          <div className="space-y-1"><L>Expiry</L><Input type="date" disabled={!canEdit} value={f.expiry_date ?? ""} onChange={(e) => setF({ ...f, expiry_date: e.target.value || null })} /></div>
+          <div className="space-y-1"><L>Document no.</L><Input disabled={!canEdit} value={f.doc_number ?? ""} onChange={(e) => setF({ ...f, doc_number: e.target.value })} /></div>
+          <div className="space-y-1"><L>Revision</L><Input disabled={!canEdit} value={f.revision ?? ""} onChange={(e) => setF({ ...f, revision: e.target.value })} /></div>
+          <div className="col-span-2 space-y-1"><L>Issuer</L><Input disabled={!canEdit} value={f.issuer ?? ""} onChange={(e) => setF({ ...f, issuer: e.target.value })} /></div>
+        </>}
+        {CLOSABLE.includes(r.entity) && <div className="col-span-2 space-y-1"><L>Recorded execution *</L><Textarea disabled={!canEdit} value={f.execution_note ?? ""} onChange={(e) => setF({ ...f, execution_note: e.target.value })} placeholder="What was done, when, by whom" /></div>}
+      </section>
+      {canEdit && <Button onClick={() => save(f)}>Save changes</Button>}
+
+      <section className="space-y-2"><L>Linked evidence</L>{linked(r.evidence_ids, "evidence")}
+        {canEdit && <div className="flex gap-2"><Input placeholder="Add evidence ID e.g. E-001" value={evText} onChange={(e) => setEvText(e.target.value)} className="h-8 text-xs" /><Button size="sm" variant="outline" onClick={() => { if (evText.trim()) { save({ evidence_ids: [...new Set([...r.evidence_ids, evText.trim()])] }); setEvText(""); } }}>Link</Button></div>}
+      </section>
+      <section className="space-y-2"><L>Acceptance criteria</L>{linked(r.acceptance_ids, "acceptance")}</section>
+      {r.links.length > 0 && <section className="space-y-2"><L>Related items</L><p className="font-mono text-xs text-muted-foreground">{r.links.join(", ")}</p></section>}
+
+      <section className="space-y-2"><L>Files</L>
+        {(files.data ?? []).map((x) => <button key={x.id} onClick={() => openFile(x.path)} className="block text-left text-xs text-primary underline">{x.filename}</button>)}
+        {canEdit && <Input type="file" className="h-9 text-xs" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />}
+      </section>
+
+      <section className="space-y-2"><L>{r.entity === "gate" ? "Go / No-Go decisions" : "Review history"}</L>
+        {canReview && <div className="space-y-2"><Textarea placeholder="Comment" value={comment} onChange={(e) => setComment(e.target.value)} />
+          <div className="flex gap-2">{(r.entity === "gate" ? ["Go", "Conditional", "No-Go"] : ["Approved", "Rejected"]).map((d) => <Button key={d} size="sm" variant={/No-Go|Rejected/.test(d) ? "destructive" : "default"} onClick={() => review(d)}>{d}</Button>)}</div></div>}
+        {(reviews.data ?? []).map((v) => <div key={v.id} className="rounded-sm border border-border p-2 text-xs"><StatusBadge value={v.decision} /> <span className="text-muted-foreground">{v.reviewer_name} · {new Date(v.created_at).toLocaleString()}</span>{v.comment && <p className="mt-1">{v.comment}</p>}</div>)}
+      </section>
+
+      <details className="text-xs"><summary className="label-caps cursor-pointer">Source workbook fields</summary>
+        <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1">{Object.entries(r.data).map(([k, v]) => <><dt key={k} className="text-muted-foreground">{k}</dt><dd className="col-span-2 break-words">{String(v)}</dd></>)}</dl>
+      </details>
+    </div>
+  );
+}
