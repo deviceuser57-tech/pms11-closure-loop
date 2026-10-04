@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/badges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -36,6 +37,10 @@ function Register() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", owner: "", due_date: "", criticality: "Medium" });
   const rows = of(entity);
+  const ownerValues = [...new Set(of("responsibility").flatMap(x => {
+    const d = (x.data ?? {}) as Record<string, unknown>;
+    return [x.owner, d["Owner Department"], d["Responsible Department"], d["Department"]].filter((v): v is string => typeof v === "string" && v.trim().length > 0 && !/^(tbc|to be assigned|rule\/wps owner)$/i.test(v.trim()));
+  }).concat(of("rule").map(x => x.owner).filter((v): v is string => !!v && !/^(tbc|to be assigned|rule\/wps owner)$/i.test(v.trim()))))].sort((a,b)=>a.localeCompare(b));
   const [title, sub] = TITLES[entity] ?? [ENTITY_LABEL[entity] ?? entity, ""];
   const ev: Col = { key: "ev", label: "Evidence", width: "w-24", render: (r) => { const s = evidenceState(r, get); return <span className="font-mono text-xs">{s.valid}/{s.total}</span>; } };
   const cols: Col[] | undefined =
@@ -59,7 +64,7 @@ function Register() {
   return (
     <div className="space-y-4">
       <header className="flex items-end justify-between gap-4"><div><h1 className="font-display text-3xl font-semibold">{title}</h1><p className="text-sm text-muted-foreground">{sub}</p></div>{entity === "change" && canEdit && <Button onClick={() => setShowCreate((v) => !v)}><Plus className="mr-1 h-4 w-4" />New Change Request</Button>}</header>
-      {entity === "change" && showCreate && canEdit && <div className="maritime-card grid gap-3 p-4 md:grid-cols-2"><div className="space-y-1 md:col-span-2"><label className="label-caps">Change title *</label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Describe the proposed change" /></div><div className="space-y-1 md:col-span-2"><label className="label-caps">Description / rationale</label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Owner</label><Input value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Due date</label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Criticality</label><Input value={form.criticality} onChange={(e) => setForm({ ...form, criticality: e.target.value })} /></div><div className="flex items-end"><Button onClick={createChange}>Create Change Request</Button></div></div>}
+      {entity === "change" && showCreate && canEdit && <div className="maritime-card grid gap-3 p-4 md:grid-cols-2"><div className="space-y-1 md:col-span-2"><label className="label-caps">Change title *</label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Describe the proposed change" /></div><div className="space-y-1 md:col-span-2"><label className="label-caps">Description / rationale</label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Owner / Department</label><Select value={form.owner} onValueChange={(v) => setForm({ ...form, owner: v })}><SelectTrigger><SelectValue placeholder="Select owner / department" /></SelectTrigger><SelectContent>{ownerValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div><div className="space-y-1"><label className="label-caps">Due date</label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Criticality</label><Input value={form.criticality} onChange={(e) => setForm({ ...form, criticality: e.target.value })} /></div><div className="flex items-end"><Button onClick={createChange}>Create Change Request</Button></div></div>}
       {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : !rows.length ? <p className="maritime-card p-6 text-sm text-muted-foreground">No data yet. An Admin can load the workbook from Workbook Import.</p> : <RecordTable title={title} rows={rows} cols={cols} filters={entity === "gap" ? ["vessel", "status", "owner", "wps", "due", "closure"] : undefined} />}
     </div>
   );
