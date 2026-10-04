@@ -60,6 +60,15 @@ export function buildAll(): SeedRecord[] {
       if (p.status) rec.status = p.status;
     }
     if (!rec.applicability && typeof rec.data["Applicability Status"] === "string") rec.applicability = rec.data["Applicability Status"] as string;
+    // Some workbook relationship columns preserve evidence IDs inside source text rather than
+    // the normalized evidence_ids array. Recover only IDs that actually exist in the imported
+    // evidence register; never turn descriptive prose into invented evidence.
+    if ((rec.entity === "deliverable" || rec.entity === "task") && !rec.evidence_ids?.length) {
+      const sourceField = rec.entity === "deliverable" ? "Evidence Location" : "Completion Evidence";
+      const sourceText = String(rec.data[sourceField] ?? "");
+      const ids = [...sourceText.matchAll(/E-[A-Za-z0-9-]+/g)].map((m) => m[0]);
+      if (ids.length) rec.evidence_ids = [...new Set(ids)];
+    }
     return rec;
   });
   return [...imported, ...buildDerived().map(normalizeRecord)];
