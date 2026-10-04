@@ -89,37 +89,36 @@ for (const [sheet, [entity, idKey, titleKey]] of Object.entries(ENTITY)) {
   }
 }
 
-const lists = {};
-const listHeaders = xlsx.utils.sheet_to_json(wb.Sheets.LISTS, { header: 1, defval: null, raw: true })[0] || [];
-const listRows = xlsx.utils.sheet_to_json(wb.Sheets.LISTS, { defval: null, raw: true });
-for (const header of listHeaders) {
-  if (!header) continue;
-  const key = String(header).includes(": ") ? String(header).split(": ")[1] : String(header);
-  const values = listRows.map(row => row[header]).filter(v => v != null && v !== "").map(v => String(v));
-  lists[key] ??= [];
-  lists[key].push(...values);
-}
+const listRows = xlsx.utils.sheet_to_json(wb.Sheets.LISTS, { header: 1, defval: null, raw: true });
+const listHeaders = listRows[0] || [];
+const columnValues = (header) => {
+  const i = listHeaders.indexOf(header);
+  return i < 0 ? [] : listRows.slice(1).map(row => row[i]).filter(v => v != null && v !== "").map(v => String(v));
+};
 const setupLists = {
   Rules: {
-    "Applicability Status": lists["Applicability Status"]?.slice(0, 3) ?? [],
-    "Criticality": lists["Criticality"]?.slice(0, 2) ?? [],
-    "Status": lists["Status"]?.slice(0, 11) ?? [],
+    "Applicability Status": columnValues("Rules: Applicability Status"),
+    "Criticality": columnValues("Rules: Criticality"),
+    "Status": columnValues("Rules: Status"),
   },
   WPS: {
-    "Applicability Status": lists["Applicability Status"]?.slice(3, 4) ?? [],
-    "WPS Status": lists["WPS Status"] ?? [],
+    "Applicability Status": columnValues("WPS: Applicability Status"),
+    "WPS Status": columnValues("WPS: WPS Status"),
   },
-  Activities: { "Applicability Status": lists["Applicability Status"]?.slice(4) ?? [] },
-  Gaps: { "Criticality": lists["Criticality"]?.slice(2) ?? [], "Status": lists["Status"]?.slice(11) ?? [] },
-  Evidence: { "Status": lists["Status"]?.slice(22) ?? [] },
+  Activities: { "Applicability Status": columnValues("Activities: Applicability Status") },
+  Gaps: {
+    "Criticality": columnValues("Gaps: Criticality"),
+    "Status": columnValues("Gaps: Status"),
+  },
+  Evidence: { "Status": columnValues("Evidence: Status") },
   Execution: {
-    "Relationship Type": lists["Relationship Type"] ?? [],
-    "Currency": lists["Currency"] ?? [],
-    "Procurement Status": lists["Procurement Status"] ?? [],
-    "Long Lead Item": lists["Long Lead Item"] ?? [],
-    "Risk Level": lists["Risk Level"] ?? [],
+    "Relationship Type": columnValues("Execution: Relationship Type"),
+    "Currency": columnValues("Execution: Currency"),
+    "Procurement Status": columnValues("Execution: Procurement Status"),
+    "Long Lead Item": columnValues("Execution: Long Lead Item"),
+    "Risk Level": columnValues("Execution: Risk Level"),
   },
-  Risks: { "Status": lists["Status"]?.slice(33) ?? [] },
+  Risks: { "Status": columnValues("Risks: Status") },
 };
 
 fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
