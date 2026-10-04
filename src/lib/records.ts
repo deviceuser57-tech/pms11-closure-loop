@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { governedStatusOptions } from "@/lib/setup-metadata";
 
-export type Rec = Tables<"records">;
+export type Rec = Tables<"records"> & { department?: string | null };
 export const VESSEL = "PMS 11";
 export const ENTITY_LABEL: Record<string,string> = { rule:"Rule",wps:"Work Package",activity:"Activity",task:"Task",deliverable:"Deliverable",gap:"Gap / Finding",acceptance:"Acceptance Criterion",evidence:"Evidence",gate:"Gate",responsibility:"Responsibility",risk:"Risk",change:"Change",equipment:"Equipment" };
 export const CLOSABLE = ["rule","wps","activity","task","gap","deliverable"];
