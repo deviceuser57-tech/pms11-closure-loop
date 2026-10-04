@@ -100,12 +100,12 @@ export function evidenceState(
 }
 
 /** Client-side mirror of the database closure rule (DB is authoritative). */
-export function blockers(r: Rec, get: (e: string, rid: string) => Rec | undefined): string[] {
+export function blockers(r: Rec, get: (e: string, rid: string) => Rec | undefined, all: Rec[] = []): string[] {
   const b: string[] = [];
   if (hasPlaceholderOwner(r)) b.push("No named owner");
   if (!r.execution_note?.trim()) b.push("No recorded execution");
   if (r.review_status !== "Approved") b.push("Review not approved");
-  const ev = evidenceState(r, get);
+  const ev = evidenceState(r, get, all);
   if (!ev.total) b.push("No linked evidence");
   else if (ev.valid < ev.total) b.push(`${ev.total - ev.valid} evidence not accepted / expired`);
   if (!r.acceptance_ids.length) b.push("No acceptance criteria");
@@ -118,9 +118,9 @@ export function blockers(r: Rec, get: (e: string, rid: string) => Rec | undefine
   return b;
 }
 
-export function closureClass(r: Rec, get: (e: string, rid: string) => Rec | undefined): "completed" | "blocked" | "open" {
+export function closureClass(r: Rec, get: (e: string, rid: string) => Rec | undefined, all: Rec[] = []): "completed" | "blocked" | "open" {
   if (isClosed(r)) return "completed";
   if (r.status === "Blocked" || r.status === "Reopened" || isOverdue(r)) return "blocked";
-  const b = blockers(r, get);
+  const b = blockers(r, get, all);
   return b.some((x) => /No-Go|expired|not accepted/.test(x)) ? "blocked" : "open";
 }
