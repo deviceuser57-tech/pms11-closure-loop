@@ -18,7 +18,7 @@ import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedREntityRouteImport } from './routes/_authenticated/r.$entity'
 import { Route as AuthenticatedAIReviewRouteImport } from './routes/_authenticated/ai-review'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
-import { Route as AuthenticatedUserGuideRouteImport } from './routes/_authenticated/user-guide'
+import { Route as AuthenticatedUserGuideRouteImport } from './routes/_authenticated/user-guide'\nimport { Route as AuthenticatedReportingRouteImport } from './routes/_authenticated/reporting'\nimport { Route as AuthenticatedAIChatRouteImport } from './routes/_authenticated/ai-chat'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -69,6 +69,12 @@ const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedReportingRoute = AuthenticatedReportingRouteImport.update({
+  id: '/reporting', path: '/reporting', getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAIChatRoute = AuthenticatedAIChatRouteImport.update({
+  id: '/ai-chat', path: '/ai-chat', getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -80,6 +86,8 @@ export interface FileRoutesByFullPath {
   '/ai-review': typeof AuthenticatedAIReviewRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/user-guide': typeof AuthenticatedUserGuideRoute
+  '/reporting': typeof AuthenticatedReportingRoute
+  '/ai-chat': typeof AuthenticatedAIChatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -91,6 +99,8 @@ export interface FileRoutesByTo {
   '/ai-review': typeof AuthenticatedAIReviewRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/user-guide': typeof AuthenticatedUserGuideRoute
+  '/reporting': typeof AuthenticatedReportingRoute
+  '/ai-chat': typeof AuthenticatedAIChatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -103,6 +113,8 @@ export interface FileRoutesById {
   '/_authenticated/r/$entity': typeof AuthenticatedREntityRoute
   '/_authenticated/ai-review': typeof AuthenticatedAIReviewRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/reporting': typeof AuthenticatedReportingRoute
+  '/_authenticated/ai-chat': typeof AuthenticatedAIChatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -205,6 +217,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAIReviewRoute: typeof AuthenticatedAIReviewRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedUserGuideRoute: typeof AuthenticatedUserGuideRoute
+  AuthenticatedReportingRoute: typeof AuthenticatedReportingRoute
+  AuthenticatedAIChatRoute: typeof AuthenticatedAIChatRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -215,6 +229,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAIReviewRoute: AuthenticatedAIReviewRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedUserGuideRoute: AuthenticatedUserGuideRoute,
+  AuthenticatedReportingRoute: AuthenticatedReportingRoute,
+  AuthenticatedAIChatRoute: AuthenticatedAIChatRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
