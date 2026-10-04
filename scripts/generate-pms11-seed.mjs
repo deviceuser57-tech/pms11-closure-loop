@@ -4,6 +4,7 @@ import xlsx from "xlsx";
 
 const input = process.argv[2] || "PMS11_POWERPIVOT_READY.xlsx";
 const output = process.argv[3] || "src/lib/seed/pms11-workbook.json";
+const listsOutput = process.argv[4] || "src/lib/seed/setup-lists.json";
 const wb = xlsx.readFile(path.resolve(input), { cellDates: true, raw: true });
 
 const ENTITY = {
@@ -58,6 +59,7 @@ for (const [sheet, [entity, idKey, titleKey]] of Object.entries(ENTITY)) {
     } else if (entity === "deliverable") {
       put("wps_id", scalar(raw,"WPS ID")); put("parent_id", scalar(raw,"Activity ID")); put("status", scalar(raw,"Status")); put("owner", scalar(raw,"Prepared By"));
       put("reviewer", scalar(raw,"Reviewed By")); put("approver", scalar(raw,"Approved By")); put("rule_ids", arr(raw,"Source Rule IDs")); put("acceptance_ids", arr(raw,"Acceptance Criteria ID"));
+      put("evidence_ids", arr(raw,"Evidence Location"));
     } else if (entity === "task") {
       put("wps_id", scalar(raw,"WPS ID")); put("parent_id", scalar(raw,"Activity ID")); put("status", scalar(raw,"Status")); put("owner", scalar(raw,"Task Owner"));
       put("rule_ids", arr(raw,"Source Rule IDs")); put("acceptance_ids", arr(raw,"Acceptance Criteria ID")); put("evidence_ids", arr(raw,"Completion Evidence"));
@@ -87,8 +89,43 @@ for (const [sheet, [entity, idKey, titleKey]] of Object.entries(ENTITY)) {
   }
 }
 
+const lists = {};
+const listHeaders = xlsx.utils.sheet_to_json(wb.Sheets.LISTS, { header: 1, defval: null, raw: true })[0] || [];
+const listRows = xlsx.utils.sheet_to_json(wb.Sheets.LISTS, { defval: null, raw: true });
+for (const header of listHeaders) {
+  if (!header) continue;
+  const key = String(header).includes(": ") ? String(header).split(": ")[1] : String(header);
+  const values = listRows.map(row => row[header]).filter(v => v != null && v !== "").map(v => String(v));
+  lists[key] ??= [];
+  lists[key].push(...values);
+}
+const setupLists = {
+  Rules: {
+    "Applicability Status": lists["Applicability Status"]?.slice(0, 3) ?? [],
+    "Criticality": lists["Criticality"]?.slice(0, 2) ?? [],
+    "Status": lists["Status"]?.slice(0, 11) ?? [],
+  },
+  WPS: {
+    "Applicability Status": lists["Applicability Status"]?.slice(3, 4) ?? [],
+    "WPS Status": lists["WPS Status"] ?? [],
+  },
+  Activities: { "Applicability Status": lists["Applicability Status"]?.slice(4) ?? [] },
+  Gaps: { "Criticality": lists["Criticality"]?.slice(2) ?? [], "Status": lists["Status"]?.slice(11) ?? [] },
+  Evidence: { "Status": lists["Status"]?.slice(22) ?? [] },
+  Execution: {
+    "Relationship Type": lists["Relationship Type"] ?? [],
+    "Currency": lists["Currency"] ?? [],
+    "Procurement Status": lists["Procurement Status"] ?? [],
+    "Long Lead Item": lists["Long Lead Item"] ?? [],
+    "Risk Level": lists["Risk Level"] ?? [],
+  },
+  Risks: { "Status": lists["Status"]?.slice(33) ?? [] },
+};
+
 fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
+fs.mkdirSync(path.dirname(path.resolve(listsOutput)), { recursive: true });
 fs.writeFileSync(path.resolve(output), JSON.stringify(records, null, 2) + "\n", "utf8");
+fs.writeFileSync(path.resolve(listsOutput), JSON.stringify(setupLists, null, 2) + "\n", "utf8");
 
 const counts = Object.fromEntries(Object.keys(ENTITY).map(sheet => [ENTITY[sheet][0], records.filter(r => r.entity === ENTITY[sheet][0]).length]));
-console.log(JSON.stringify({ input, output, sheets: wb.SheetNames.length, counts, total: records.length }, null, 2));
+console.log(JSON.stringify({ input, output, listsOutput, sheets: wb.SheetNames.length, counts, total: records.length }, null, 2));
