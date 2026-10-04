@@ -1,16 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { governedApplicabilityOptions, governedCriticalityOptions, governedStatusOptions } from "@/lib/setup-metadata";
+import { useSetupList } from "@/lib/setup-metadata";
 
 describe("PMS-11 governed master data", () => {
-  it("exposes workbook-derived status values", () => {
-    expect(governedStatusOptions("task")).toContain("Verified");
-    expect(governedStatusOptions("task")).toContain("On Hold");
+  it("uses the exact Rules vocabulary from workbook LISTS", () => {
+    expect(useSetupList("rule", "criticality")).toEqual(["Critical", "Major"]);
+    expect(useSetupList("rule", "status")).toContain("Verified");
   });
-  it("exposes workbook-derived criticality values", () => {
-    expect(governedCriticalityOptions()).toEqual(["Critical","Major","High","Medium","Low"]);
+  it("does not invent a Task criticality/status dictionary when LISTS has none", () => {
+    expect(useSetupList("task", "criticality")).toEqual([]);
+    expect(useSetupList("task", "status")).toEqual([]);
   });
-  it("keeps applicability entity-aware", () => {
-    expect(governedApplicabilityOptions("rule")).toContain("Conditional");
-    expect(governedApplicabilityOptions("wps")).toEqual(["Conditional / Information Gap"]);
+  it("keeps applicability entity-specific", () => {
+    expect(useSetupList("rule", "applicability")).toContain("Conditional");
+    expect(useSetupList("wps", "applicability")).toEqual(["Conditional / Information Gap"]);
   });
 });
