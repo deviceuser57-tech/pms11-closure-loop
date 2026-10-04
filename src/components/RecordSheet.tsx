@@ -12,7 +12,7 @@ import { StatusBadge, SourceBadge } from "@/components/badges";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { blockers, CLOSABLE, ENTITY_LABEL, isExpired, statusOptions, useInvalidateRecords, useRecords, type Rec } from "@/lib/records";
-import { useSetupList } from "@/lib/setup-metadata";
+import { useGovernedApplicability, useGovernedCriticality, useGovernedStatus, useSetupList } from "@/lib/setup-metadata";
 import { runEvidenceAssessment } from "@/lib/ai-assess.functions";
 
 const Ctx = createContext<{ open: (id: string) => void }>({ open: () => {} });
@@ -32,7 +32,11 @@ function Detail({id}:{id:string}){
   if(!r)return null;
   const rd=(r.data??{}) as Record<string,unknown>; const bl=CLOSABLE.includes(r.entity)?blockers(r,get):[];
   const governedStatus=useSetupList(r.entity,"status"); const governedCriticality=useSetupList(r.entity,"criticality"); const governedApplicability=useSetupList(r.entity,"applicability");
-  const statusValues=[...new Set([r.status,...governedStatus,...statusOptions(r.entity)])]; const criticalityValues=[...new Set([r.criticality,...governedCriticality].filter(Boolean) as string[])]; const applicabilityValues=[...new Set([r.applicability,...governedApplicability].filter(Boolean) as string[])];
+  const allGovernedStatus=useGovernedStatus(); const allGovernedCriticality=useGovernedCriticality(); const allGovernedApplicability=useGovernedApplicability();
+  const statusValues=[...new Set([r.status,...governedStatus,...allGovernedStatus,...statusOptions(r.entity)].filter(Boolean) as string[])];
+  const criticalityValues=[...new Set([r.criticality,...governedCriticality,...allGovernedCriticality].filter(Boolean) as string[])];
+  const applicabilityValues=[...new Set([r.applicability,...governedApplicability,...allGovernedApplicability].filter(Boolean) as string[])];
+  const ownerValues=[...new Set(all.flatMap(x=>{const d=(x.data??{}) as Record<string,unknown>; return [x.owner,d["Owner Department"],d["Responsible Department"],d["Department"]].filter((v):v is string=>typeof v==="string"&&v.trim().length>0&&!/^(tbc|to be assigned|rule\/wps owner)$/i.test(v.trim()));}))].sort((a,b)=>a.localeCompare(b));
   const save=async(patch:Partial<Rec>)=>{const{error}=await supabase.from("records").update(patch as never).eq("id",r.id);if(error)return toast.error(error.message);toast.success("Saved");inval();};
   const review=async(decision:string)=>{const kind=r.entity==="gate"?"gate":"review";const{error}=await supabase.from("reviews").insert({record_id:r.id,decision,comment,kind,reviewer_name:user?.email} as never);if(error)return toast.error(error.message);const patch:Partial<Rec>=r.entity==="gate"?{status:decision,no_go_active:decision==="No-Go"}:r.entity==="evidence"?{status:decision==="Approved"?"Accepted":"Rejected",review_status:decision}:{review_status:decision};await save(patch);setComment("");reviews.refetch();};
   const upload=async(file:File)=>{const path=`${r.entity}/${r.rid}/${Date.now()}-${file.name}`;const{error}=await supabase.storage.from("evidence").upload(path,file);if(error)return toast.error(error.message);await supabase.from("evidence_files").insert({record_id:r.id,path,filename:file.name,size:file.size} as never);if(r.entity==="evidence"&&r.status==="Required")await save({status:"Submitted"});files.refetch();toast.success("Uploaded");};
@@ -44,7 +48,7 @@ function Detail({id}:{id:string}){
     {typeof rd["PMS-11 Scope Reconciliation"]==="string"&&<div className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm"><p className="label-caps mb-1 text-primary">PMS-11 scope reconciliation (derived)</p>{rd["PMS-11 Scope Reconciliation"] as string}</div>}
     {CLOSABLE.includes(r.entity)&&r.status!=="Closed"&&<div className={`rounded-md border p-3 text-sm ${bl.length?"border-destructive/40 bg-destructive/5":"border-success/40 bg-success/5"}`}><p className="label-caps mb-1">Closure check</p>{bl.length?<ul className="list-disc pl-5 text-xs">{bl.map(b=><li key={b}>{b}</li>)}</ul>:<p className="text-xs text-success">All closure conditions met — item can be closed.</p>}</div>}
     <section className="grid grid-cols-2 gap-4">
-      <div className="space-y-1"><L>Owner *</L><Input disabled={!canEdit} value={f.owner??""} onChange={e=>setF({...f,owner:e.target.value})}/></div>
+      <div className="space-y-1"><L>Owner *</L><Select disabled={!canEdit} value={f.owner ?? ""} onValueChange={v=>setF({...f,owner:v})}><SelectTrigger><SelectValue placeholder="Select owner / department"/></SelectTrigger><SelectContent className="max-h-72">{f.owner && !ownerValues.includes(f.owner) && <SelectItem value={f.owner}>{f.owner} (current)</SelectItem>}{ownerValues.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select><p className="text-[10px] text-muted-foreground">Controlled from imported MASTER_DATA/record owner values; no new vocabulary is invented.</p></div>
       <div className="space-y-1"><L>Due date</L><Input type="date" disabled={!canEdit} value={f.due_date??""} onChange={e=>setF({...f,due_date:e.target.value||null})}/></div>
       <div className="space-y-1"><L>Status</L><Select disabled={!canEdit} value={f.status??""} onValueChange={v=>setF({...f,status:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{statusValues.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-1"><L>Criticality</L><Select disabled={!canEdit} value={f.criticality??""} onValueChange={v=>setF({...f,criticality:v})}><SelectTrigger><SelectValue placeholder="Governed value"/></SelectTrigger><SelectContent>{criticalityValues.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
