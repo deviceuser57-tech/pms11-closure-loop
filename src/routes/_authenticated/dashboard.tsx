@@ -65,7 +65,6 @@ function Dashboard() {
               <li key={r.id}><button onClick={() => sheet.open(r.id)} className="flex w-full items-center gap-2 rounded-sm px-1 py-0.5 text-left text-xs hover:bg-accent"><span className="rid w-24 shrink-0">{r.rid}</span><span className="truncate">{r.title}</span><span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">ev {r.evidence_ids.length}</span></button></li>))}</ul>
           </div>))}
       </section>
-      <p className="text-xs text-muted-foreground">Power Pivot model: <b>NOT RUN</b> — embedded model false, VBA not tested in Windows Excel. Figures here come from imported workbook rows (Workbook), PMS-11 reconciliation (Derived) and app entries.</p>
     </div>
   );
 }
