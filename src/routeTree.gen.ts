@@ -18,6 +18,7 @@ import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedREntityRouteImport } from './routes/_authenticated/r.$entity'
 import { Route as AuthenticatedAIReviewRouteImport } from './routes/_authenticated/ai-review'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
+import { Route as AuthenticatedUserGuideRouteImport } from './routes/_authenticated/user-guide'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +59,11 @@ const AuthenticatedAIReviewRoute = AuthenticatedAIReviewRouteImport.update({
   path: '/ai-review',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedUserGuideRoute = AuthenticatedUserGuideRouteImport.update({
+  id: '/user-guide',
+  path: '/user-guide',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/r/$entity': typeof AuthenticatedREntityRoute
   '/ai-review': typeof AuthenticatedAIReviewRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/user-guide': typeof AuthenticatedUserGuideRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/r/$entity': typeof AuthenticatedREntityRoute
   '/ai-review': typeof AuthenticatedAIReviewRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/user-guide': typeof AuthenticatedUserGuideRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,9 +106,9 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/audit' | '/dashboard' | '/import' | '/r/$entity' | '/ai-review' | '/admin/users'
+  fullPaths: '/' | '/auth' | '/audit' | '/dashboard' | '/import' | '/r/$entity' | '/ai-review' | '/admin/users' | '/user-guide'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/audit' | '/dashboard' | '/import' | '/r/$entity' | '/ai-review' | '/admin/users'
+  to: '/' | '/auth' | '/audit' | '/dashboard' | '/import' | '/r/$entity' | '/ai-review' | '/admin/users' | '/user-guide'
   id:
     | '__root__'
     | '/'
@@ -112,6 +120,7 @@ export interface FileRouteTypes {
     | '/_authenticated/r/$entity'
     | '/_authenticated/ai-review'
     | '/_authenticated/admin/users'
+    | '/_authenticated/user-guide'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -195,6 +204,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedREntityRoute: typeof AuthenticatedREntityRoute
   AuthenticatedAIReviewRoute: typeof AuthenticatedAIReviewRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+  AuthenticatedUserGuideRoute: typeof AuthenticatedUserGuideRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -204,6 +214,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedREntityRoute: AuthenticatedREntityRoute,
   AuthenticatedAIReviewRoute: AuthenticatedAIReviewRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+  AuthenticatedUserGuideRoute: AuthenticatedUserGuideRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
