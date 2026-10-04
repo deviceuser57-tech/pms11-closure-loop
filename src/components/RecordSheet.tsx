@@ -129,7 +129,7 @@ function Detail({ id }: { id: string }) {
 
   const sourceData = (record.data ?? {}) as Record<string, unknown>;
   const closureBlockers = CLOSABLE.includes(record.entity)
-    ? blockers(record, get)
+    ? blockers(record, get, all)
     : [];
 
   const governedStatus = useSetupList(record.entity, "status");
