@@ -25,7 +25,7 @@ const DEFAULT_COLS: Col[] = [
 const ALL = "__all";
 
 export function RecordTable({ rows, cols = DEFAULT_COLS, title, filters = ["status", "owner", "wps", "due", "closure"] }: { rows: Rec[]; cols?: Col[]; title: string; filters?: string[] }) {
-  const { get, refetch } = useRecords();
+  const { get, all, refetch } = useRecords();
   const { canEdit } = useAuth();
   const sheet = useRecordSheet();
   const [q, setQ] = useState("");

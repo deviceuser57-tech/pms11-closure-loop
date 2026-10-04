@@ -58,42 +58,98 @@ export function useInvalidateRecords() {
   return () => qc.invalidateQueries({ queryKey: ["records"] });
 }
 
-/** Resolve evidence from both explicit links and the workbook's reverse WPS mapping.
- * Evidence rows may reference one or several WPS IDs in data["WPS IDs"]; the normalized
- * evidence.wps_id field only preserves a single WPS when the source contains exactly one.
+/**
+ * Resolve source-driven relationships. The workbook is the authority for linkage;
+ * normalized single-value columns are only one representation of that linkage.
  */
-export function evidenceIdsForRecord(
-  r: Rec,
-  all: Rec[],
-): string[] {
-  const explicit = Array.isArray(r.evidence_ids) ? r.evidence_ids : [];
-  if (r.entity !== "wps") return [...new Set(explicit)];
+const RAW_LINK_FIELDS: Record<string, string[]> = {
+  rule: ["Rule IDs", "Rule ID"],
+  wps: ["WPS IDs", "WPS ID"],
+  activity: ["Activity IDs", "Activity ID"],
+  task: ["Task IDs", "Task ID"],
+  deliverable: ["Deliverable IDs", "Deliverable ID"],
+  gap: ["Gap IDs", "Gap ID", "Related Gap IDs"],
+  acceptance: ["Acceptance Criteria IDs", "Acceptance Criteria ID", "Acceptance ID"],
+  evidence: ["Evidence IDs", "Evidence ID"],
+  gate: ["Gate IDs", "Gate ID"],
+  responsibility: ["Responsibility IDs", "Responsibility Record ID"],
+  risk: ["Risk IDs", "Record ID"],
+};
 
-  const reverse = all
-    .filter((item) => item.entity === "evidence")
+const SOURCE_LINK_FIELDS: Record<string, Record<string, string[]>> = {
+  rule: { wps: ["WPS ID", "WPS IDs"], evidence: ["Required Evidence"], acceptance: ["Acceptance Criteria ID"] },
+  wps: { rule: ["Source Rule IDs"], evidence: ["WPS Acceptance Evidence", "Evidence IDs"], acceptance: ["WPS Acceptance Criteria ID"], activity: ["Activity IDs"] },
+  activity: { wps: ["WPS ID", "WPS IDs"], rule: ["Source Rule IDs"], evidence: ["Evidence Required"], acceptance: ["Related Acceptance Criteria IDs"] },
+  task: { wps: ["WPS ID", "WPS IDs"], activity: ["Activity ID", "Activity IDs"], rule: ["Source Rule IDs"], evidence: ["Completion Evidence"], acceptance: ["Acceptance Criteria ID"] },
+  deliverable: { wps: ["WPS ID", "WPS IDs"], activity: ["Activity ID", "Activity IDs"], rule: ["Source Rule IDs"], evidence: ["Evidence Location"], acceptance: ["Acceptance Criteria ID"] },
+  gap: { wps: ["Related WPS IDs", "WPS ID", "WPS IDs"], rule: ["Source Rule IDs"], evidence: ["Closure Evidence"], acceptance: ["Acceptance Criteria IDs"] },
+  acceptance: { wps: ["WPS ID", "WPS IDs"], rule: ["Rule ID", "Rule IDs"], evidence: ["Evidence ID", "Evidence IDs"] },
+  evidence: { wps: ["WPS IDs", "WPS ID"], rule: ["Rule IDs", "Rule ID"], acceptance: ["Acceptance Criteria IDs", "Acceptance Criteria ID"] },
+  responsibility: { wps: ["WPS ID", "WPS IDs"], activity: ["Activity ID", "Activity IDs"], rule: ["Rule ID", "Rule IDs"] },
+  risk: { wps: ["WPS ID", "WPS IDs"], rule: ["Rule IDs", "Rule ID"] },
+};
+
+function rawIds(item: Rec, fields: string[]): string[] {
+  const data = (item.data ?? {}) as Record<string, unknown>;
+  const out: string[] = [];
+  for (const field of fields) {
+    const value = data[field];
+    if (Array.isArray(value)) out.push(...value.map(String));
+    else if (typeof value === "string") out.push(...value.split(/[;,]/).map((v) => v.trim()).filter(Boolean));
+  }
+  return out;
+}
+
+function normalizedIds(item: Rec, relation: string): string[] {
+  if (relation === "evidence") return Array.isArray(item.evidence_ids) ? item.evidence_ids : [];
+  if (relation === "rule") return Array.isArray(item.rule_ids) ? item.rule_ids : [];
+  if (relation === "acceptance") return Array.isArray(item.acceptance_ids) ? item.acceptance_ids : [];
+  if (relation === "wps") return item.wps_id ? [item.wps_id] : [];
+  if (relation === "gate") return item.gate_id ? [item.gate_id] : [];
+  if (relation === "parent") return item.parent_id ? [item.parent_id] : [];
+  return [];
+}
+
+/** Return all records of relationEntity linked to r, using normalized fields and raw workbook IDs. */
+export function relatedRecordIds(r: Rec, relationEntity: string, all: Rec[]): string[] {
+  const relationRows = all.filter((item) => item.entity === relationEntity);
+  const existing = new Set(relationRows.map((item) => item.rid));
+  const direct = normalizedIds(r, relationEntity).filter((id) => existing.has(id));
+  const reverseFields = SOURCE_LINK_FIELDS[relationEntity]?.[r.entity] ?? [];
+  const reverse = relationRows
     .filter((item) => {
-      if (item.wps_id === r.rid) return true;
-      const data = (item.data ?? {}) as Record<string, unknown>;
-      const raw = data["WPS IDs"];
-      const ids = Array.isArray(raw)
-        ? raw.map(String)
-        : typeof raw === "string"
-          ? raw.split(/[;,]/).map((value) => value.trim()).filter(Boolean)
-          : [];
-      return ids.includes(r.rid);
+      const ids = normalizedIds(item, r.entity);
+      if (ids.includes(r.rid)) return true;
+      return rawIds(item, reverseFields).includes(r.rid);
     })
     .map((item) => item.rid);
+  return [...new Set([...direct, ...reverse])];
+}
 
-  return [...new Set([...explicit, ...reverse])];
+/** Evidence linked to any record, including multi-valued workbook reverse mappings. */
+export function evidenceIdsForRecord(r: Rec, all: Rec[]): string[] {
+  return relatedRecordIds(r, "evidence", all);
+}
+
+/** Counts for a WPS. WPS is the primary work-breakdown axis for execution/readiness reporting. */
+export function wpsRelationshipCounts(wps: Rec, all: Rec[]) {
+  const entities = ["rule", "evidence", "activity", "deliverable", "task", "gap", "acceptance", "responsibility", "risk"] as const;
+  return Object.fromEntries(entities.map((entity) => [entity, relatedRecordIds(wps, entity, all).length])) as Record<(typeof entities)[number], number>;
+}
+
+/** Detailed linked records for a WPS, used by the WPS detail view and audit/debugging. */
+export function wpsRelationships(wps: Rec, all: Rec[]) {
+  const entities = ["rule", "evidence", "activity", "deliverable", "task", "gap", "acceptance", "responsibility", "risk"] as const;
+  return Object.fromEntries(entities.map((entity) => [entity, relatedRecordIds(wps, entity, all)])) as Record<(typeof entities)[number], string[]>;
 }
 
 /** Evidence validity for an item: accepted and not expired. */
 export function evidenceState(
   r: Rec,
   get: (e: string, rid: string) => Rec | undefined,
-  all?: Rec[],
+  all: Rec[] = [],
 ) {
-  const ids = evidenceIdsForRecord(r, all ?? []);
+  const ids = evidenceIdsForRecord(r, all);
   const items = ids.map((id) => ({ id, rec: get("evidence", id) }));
   const valid = items.filter((i) => i.rec && i.rec.status === "Accepted" && !isExpired(i.rec)).length;
   return { items, valid, total: items.length };
