@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ENTITY_LABEL, evidenceState, useRecords } from "@/lib/records";
+import { ENTITY_LABEL, evidenceState, relatedRecordIds, wpsRelationshipCounts, useRecords } from "@/lib/records";
 import { useSetupList } from "@/lib/setup-metadata";
 
 export const Route = createFileRoute("/_authenticated/r/$entity")({
@@ -33,7 +33,7 @@ const TITLES: Record<string, [string, string]> = {
 
 function Register() {
   const { entity } = Route.useParams();
-  const { of, get, isLoading, refetch } = useRecords();
+  const { of, get, all, isLoading, refetch } = useRecords();
   const { canEdit } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", owner: "", due_date: "", status: "Not Started", criticality: "", applicability: "" });
@@ -46,12 +46,23 @@ function Register() {
     return [x.owner, d["Owner Department"], d["Responsible Department"], d["Department"]].filter((v): v is string => typeof v === "string" && v.trim().length > 0 && !/^(tbc|to be assigned|rule\/wps owner)$/i.test(v.trim()));
   }).concat(of("rule").map(x => x.owner).filter((v): v is string => !!v && !/^(tbc|to be assigned|rule\/wps owner)$/i.test(v.trim()))))].sort((a,b)=>a.localeCompare(b));
   const [title, sub] = TITLES[entity] ?? [ENTITY_LABEL[entity] ?? entity, ""];
-  const ev: Col = { key: "ev", label: "Evidence", width: "w-24", render: (r) => { const s = evidenceState(r, get); return <span className="font-mono text-xs">{s.valid}/{s.total}</span>; } };
+  const ev: Col = { key: "ev", label: "Evidence", width: "w-24", render: (r) => { const s = evidenceState(r, get, all); return <span className="font-mono text-xs" title="Accepted / linked evidence">{s.valid}/{s.total}</span>; } };
+  const wpsCounts: Col[] = entity === "wps" ? [
+    { key: "rules_count", label: "Rules", width: "w-20", render: (r) => <span className="font-mono text-xs">{wpsRelationshipCounts(r, all).rule}</span> },
+    { key: "ev_count", label: "Evidence", width: "w-24", render: (r) => { const s = evidenceState(r, get, all); return <span className="font-mono text-xs" title="Accepted / linked evidence">{s.valid}/{s.total}</span>; } },
+    { key: "activities_count", label: "Activities", width: "w-24", render: (r) => <span className="font-mono text-xs">{wpsRelationshipCounts(r, all).activity}</span> },
+    { key: "deliverables_count", label: "Deliverables", width: "w-28", render: (r) => <span className="font-mono text-xs">{wpsRelationshipCounts(r, all).deliverable}</span> },
+    { key: "tasks_count", label: "Tasks", width: "w-20", render: (r) => <span className="font-mono text-xs">{wpsRelationshipCounts(r, all).task}</span> },
+    { key: "gaps_count", label: "Gaps", width: "w-20", render: (r) => <span className="font-mono text-xs">{wpsRelationshipCounts(r, all).gap}</span> },
+    { key: "acceptance_count", label: "Acceptance", width: "w-24", render: (r) => <span className="font-mono text-xs">{wpsRelationshipCounts(r, all).acceptance}</span> },
+    { key: "responsibility_count", label: "RACI", width: "w-20", render: (r) => <span className="font-mono text-xs">{wpsRelationshipCounts(r, all).responsibility}</span> },
+    { key: "risk_count", label: "Risks", width: "w-20", render: (r) => <span className="font-mono text-xs">{wpsRelationshipCounts(r, all).risk}</span> },
+  ] : [];
   const cols: Col[] | undefined =
     entity === "evidence" ? [{ key: "rid", label: "ID", width: "w-24" }, { key: "title", label: "Document" }, { key: "doc_number", label: "Doc no.", width: "w-24" }, { key: "issuer", label: "Issuer", width: "w-40" }, { key: "expiry_date", label: "Expiry", width: "w-24" }, { key: "status", label: "Status", width: "w-28" }]
     : entity === "gate" ? [{ key: "rid", label: "Gate", width: "w-24" }, { key: "title", label: "Name" }, { key: "nogo", label: "No-Go", width: "w-24", render: (r) => r.no_go_active ? <StatusBadge value="No-Go" /> : <span className="text-xs text-muted-foreground">—</span> }, { key: "status", label: "Decision", width: "w-28" }]
     : entity === "gap" ? [{ key: "rid", label: "ID", width: "w-24" }, { key: "title", label: "Finding" }, { key: "criticality", label: "Criticality", width: "w-24", render: (r) => <StatusBadge value={r.criticality} /> }, { key: "owner", label: "Owner", width: "w-36" }, { key: "due_date", label: "Due", width: "w-24" }, ev, { key: "status", label: "Status", width: "w-28" }]
-    : ["rule", "wps", "task"].includes(entity) ? [{ key: "rid", label: "ID", width: "w-28" }, { key: "title", label: "Title" }, { key: entity === "wps" ? "gate_id" : "wps_id", label: entity === "wps" ? "Gate" : "WPS", width: "w-20" }, { key: "owner", label: "Owner", width: "w-36" }, ev, { key: "status", label: "Status", width: "w-28" }]
+    : entity === "wps" ? [{ key: "rid", label: "ID", width: "w-28" }, { key: "title", label: "Title" }, { key: "gate_id", label: "Gate", width: "w-20" }, { key: "owner", label: "Owner", width: "w-36" }, ...wpsCounts, { key: "status", label: "Status", width: "w-28" }] : ["rule", "task"].includes(entity) ? [{ key: "rid", label: "ID", width: "w-28" }, { key: "title", label: "Title" }, { key: "wps_id", label: "WPS", width: "w-20" }, { key: "owner", label: "Owner", width: "w-36" }, ev, { key: "status", label: "Status", width: "w-28" }]
     : undefined;
   const createRecord = async () => {
     if (!canEdit) return;
