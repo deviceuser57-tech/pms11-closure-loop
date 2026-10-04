@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { Plus } from "lucide-react";
 import { RecordTable, type Col } from "@/components/RecordTable";
 import { StatusBadge } from "@/components/badges";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { ENTITY_LABEL, evidenceState, useRecords } from "@/lib/records";
 
 export const Route = createFileRoute("/_authenticated/r/$entity")({
@@ -23,7 +31,10 @@ const TITLES: Record<string, [string, string]> = {
 
 function Register() {
   const { entity } = Route.useParams();
-  const { of, get, isLoading } = useRecords();
+  const { of, get, isLoading, refetch } = useRecords();
+  const { canEdit } = useAuth();
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({ title: "", description: "", owner: "", due_date: "", criticality: "Medium" });
   const rows = of(entity);
   const [title, sub] = TITLES[entity] ?? [ENTITY_LABEL[entity] ?? entity, ""];
   const ev: Col = { key: "ev", label: "Evidence", width: "w-24", render: (r) => { const s = evidenceState(r, get); return <span className="font-mono text-xs">{s.valid}/{s.total}</span>; } };
@@ -33,9 +44,22 @@ function Register() {
     : entity === "gap" ? [{ key: "rid", label: "ID", width: "w-24" }, { key: "title", label: "Finding" }, { key: "criticality", label: "Criticality", width: "w-24", render: (r) => <StatusBadge value={r.criticality} /> }, { key: "owner", label: "Owner", width: "w-36" }, { key: "due_date", label: "Due", width: "w-24" }, ev, { key: "status", label: "Status", width: "w-28" }]
     : ["rule", "wps", "task"].includes(entity) ? [{ key: "rid", label: "ID", width: "w-28" }, { key: "title", label: "Title" }, { key: entity === "wps" ? "gate_id" : "wps_id", label: entity === "wps" ? "Gate" : "WPS", width: "w-20" }, { key: "owner", label: "Owner", width: "w-36" }, ev, { key: "status", label: "Status", width: "w-28" }]
     : undefined;
+  const createChange = async () => {
+    if (!form.title.trim()) return toast.error("Change title is required.");
+    const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
+    const rid = `CHG-${stamp}`;
+    const { error } = await supabase.from("records").insert({
+      entity: "change", rid, title: form.title.trim(), description: form.description.trim() || null,
+      owner: form.owner.trim() || null, due_date: form.due_date || null, criticality: form.criticality,
+      status: "Raised", source_kind: "user", review_status: "Pending", data: { "Change Request": "Created in Changes Register" },
+    } as never);
+    if (error) return toast.error(error.message);
+    toast.success(`${rid} created`); setForm({ title: "", description: "", owner: "", due_date: "", criticality: "Medium" }); setShowCreate(false); refetch();
+  };
   return (
     <div className="space-y-4">
-      <header><h1 className="font-display text-3xl font-semibold">{title}</h1><p className="text-sm text-muted-foreground">{sub}</p></header>
+      <header className="flex items-end justify-between gap-4"><div><h1 className="font-display text-3xl font-semibold">{title}</h1><p className="text-sm text-muted-foreground">{sub}</p></div>{entity === "change" && canEdit && <Button onClick={() => setShowCreate((v) => !v)}><Plus className="mr-1 h-4 w-4" />New Change Request</Button>}</header>
+      {entity === "change" && showCreate && canEdit && <div className="maritime-card grid gap-3 p-4 md:grid-cols-2"><div className="space-y-1 md:col-span-2"><label className="label-caps">Change title *</label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Describe the proposed change" /></div><div className="space-y-1 md:col-span-2"><label className="label-caps">Description / rationale</label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Owner</label><Input value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Due date</label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Criticality</label><Input value={form.criticality} onChange={(e) => setForm({ ...form, criticality: e.target.value })} /></div><div className="flex items-end"><Button onClick={createChange}>Create Change Request</Button></div></div>}
       {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : !rows.length ? <p className="maritime-card p-6 text-sm text-muted-foreground">No data yet. An Admin can load the workbook from Workbook Import.</p> : <RecordTable title={title} rows={rows} cols={cols} filters={entity === "gap" ? ["vessel", "status", "owner", "wps", "due", "closure"] : undefined} />}
     </div>
   );
