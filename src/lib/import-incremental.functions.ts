@@ -26,8 +26,9 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
       if (!old) added.push({ entity:r.entity, rid:r.rid, title:r.title });
       else {
         const next = toDbRecord(r);
-        const comparable = ["title","description","wps_id","gate_id","parent_id","status","owner","reviewer","approver","due_date","expiry_date","criticality","applicability","evidence_ids","acceptance_ids","rule_ids","links","doc_number","revision","issuer","data"];
-        const diff = comparable.filter(k => JSON.stringify((old as Record<string,unknown>)[k] ?? null) !== JSON.stringify((next as Record<string,unknown>)[k] ?? null));
+        const sourceChanged = JSON.stringify((old as Record<string,unknown>).data ?? {}) !== JSON.stringify(r.data ?? {});
+        const comparable = ["title","description","wps_id","gate_id","parent_id","status","owner","reviewer","approver","due_date","expiry_date","criticality","applicability","evidence_ids","acceptance_ids","rule_ids","links","doc_number","revision","issuer"];
+        const diff = sourceChanged ? comparable.filter(k => JSON.stringify((old as Record<string,unknown>)[k] ?? null) !== JSON.stringify((next as Record<string,unknown>)[k] ?? null)) : [];
         if (!diff.length) unchanged.push({ entity:r.entity, rid:r.rid });
         else changed.push({ entity:r.entity, rid:r.rid, title:r.title, fields:diff });
       }
@@ -66,8 +67,8 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
         added++;
         continue;
       }
-      const diff = sourceFields.filter(k => JSON.stringify((old as Record<string,unknown>)[k] ?? null) !== JSON.stringify((next as Record<string,unknown>)[k] ?? null));
-      if (!diff.length) { unchanged++; continue; }
+      const sourceChanged = JSON.stringify((old as Record<string,unknown>).data ?? {}) !== JSON.stringify(r.data ?? {});
+      if (!sourceChanged) { unchanged++; continue; }
       const patch = Object.fromEntries(sourceFields.filter(k => k !== "entity" && k !== "rid").map(k => [k,(next as Record<string,unknown>)[k]]));
       const { error:e } = await context.supabase.from("records").update(patch as never).eq("id",old.id);
       if (e) throw new Error("Update " + r.entity + "/" + r.rid + ": " + e.message);
