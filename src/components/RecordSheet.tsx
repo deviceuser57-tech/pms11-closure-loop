@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
   blockers,
+  evidenceIdsForRecord,
   CLOSABLE,
   ENTITY_LABEL,
   isExpired,
@@ -566,7 +567,7 @@ function Detail({ id }: { id: string }) {
 
       <section className="space-y-2">
         <FieldLabel>Linked evidence</FieldLabel>
-        {linked(record.evidence_ids, "evidence")}
+        {linked(evidenceIdsForRecord(record, all), "evidence")}
 
         {canEdit ? (
           <div className="flex gap-2">
