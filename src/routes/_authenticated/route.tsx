@@ -43,7 +43,7 @@ function Shell() {
           </div>
           <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
             {NAV.map((n) => (
-              <Link key={n.to} to={n.to} className="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent" activeProps={{ className: "bg-sidebar-accent text-primary" }}>
+              <Link key={n.to} to={n.to as "/dashboard"} className="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent" activeProps={{ className: "bg-sidebar-accent text-primary" }}>
                 <n.icon className="h-4 w-4" />{n.label}
               </Link>
             ))}

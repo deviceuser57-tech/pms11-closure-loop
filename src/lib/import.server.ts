@@ -119,7 +119,7 @@ export function buildPreview() {
   };
 }
 
-export type RowIssue = { entity: string; rid: string; title: string; source: string; severity: "error" | "warning"; issues: string[]; data: Record<string, unknown> };
+export type RowIssue = { entity: string; rid: string; title: string; source: string; severity: "error" | "warning"; issues: string[]; data: Record<string, string | number | boolean | null> };
 
 export function validateRows(all: SeedRecord[]): RowIssue[] {
   const ids = new Set(all.map((r) => `${r.entity}:${r.rid}`));

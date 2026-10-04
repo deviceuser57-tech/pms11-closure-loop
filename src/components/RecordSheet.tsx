@@ -42,6 +42,7 @@ function Detail({ id }: { id: string }) {
   const [comment, setComment] = useState("");
   const [evText, setEvText] = useState("");
   if (!r) return null;
+  const rd = (r.data ?? {}) as Record<string, unknown>;
   const bl = CLOSABLE.includes(r.entity) ? blockers(r, get) : [];
 
   const save = async (patch: Partial<Rec>) => {
@@ -90,8 +91,8 @@ function Detail({ id }: { id: string }) {
         <div className="flex flex-wrap gap-2 text-xs"><StatusBadge value={r.status} />{r.applicability && <StatusBadge value={r.applicability} />}<StatusBadge value={`Review: ${r.review_status}`} />{r.wps_id && <span className="rid">{r.wps_id}</span>}{r.gate_id && <span className="rid">{r.gate_id}</span>}</div>
       </SheetHeader>
 
-      {typeof r.data["PMS-11 Scope Reconciliation"] === "string" && (
-        <div className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm"><p className="label-caps mb-1 text-primary">PMS-11 scope reconciliation (derived)</p>{r.data["PMS-11 Scope Reconciliation"] as string}</div>
+      {typeof rd["PMS-11 Scope Reconciliation"] === "string" && (
+        <div className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm"><p className="label-caps mb-1 text-primary">PMS-11 scope reconciliation (derived)</p>{rd["PMS-11 Scope Reconciliation"] as string}</div>
       )}
 
       {CLOSABLE.includes(r.entity) && r.status !== "Closed" && (
@@ -138,7 +139,7 @@ function Detail({ id }: { id: string }) {
       </section>
 
       <details className="text-xs"><summary className="label-caps cursor-pointer">Source workbook fields</summary>
-        <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1">{Object.entries(r.data).map(([k, v]) => <><dt key={k} className="text-muted-foreground">{k}</dt><dd className="col-span-2 break-words">{String(v)}</dd></>)}</dl>
+        <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1">{Object.entries(rd).map(([k, v]) => <><dt key={k} className="text-muted-foreground">{k}</dt><dd className="col-span-2 break-words">{String(v)}</dd></>)}</dl>
       </details>
     </div>
   );
