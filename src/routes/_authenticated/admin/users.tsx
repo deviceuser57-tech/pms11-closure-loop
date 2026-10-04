@@ -1,19 +1,29 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ShieldCheck, Plus, Pencil, Trash2, BookOpen } from "lucide-react";
+import { ShieldCheck, Plus, Pencil, Trash2, BookOpen, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Link } from "@tanstack/react-router";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { wpsRelationshipCounts, useRecords } from "@/lib/records";
 
 const ROLES = ["admin", "reviewer", "contributor", "viewer"] as const;
 type Role = typeof ROLES[number];
 
 const ADMIN_REGISTERS = [
   ["rule","Rules"],["wps","Work Packages"],["activity","Activities"],["task","Tasks"],["gap","Findings & CAPA"],["deliverable","Deliverables"],["evidence","Evidence"],["acceptance","Acceptance"],["gate","Gates"],["responsibility","Responsibilities"],["risk","Risks"],["change","Changes"],["equipment","Equipment"],
+] as const;
+
+const WPS_COUNT_COLUMNS = [
+  ["rule", "Rules"],
+  ["evidence", "Evidence"],
+  ["activity", "Activities"],
+  ["deliverable", "Deliverables"],
+  ["task", "Tasks"],
+  ["gap", "Gaps"],
+  ["acceptance", "Acceptance"],
 ] as const;
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
@@ -23,6 +33,7 @@ export const Route = createFileRoute("/_authenticated/admin/users")({
 
 function UsersAdmin() {
   const { isAdmin, loading } = useAuth();
+  const records = useRecords();
   const q = useQuery({
     queryKey: ["admin-users"],
     enabled: isAdmin,
@@ -51,12 +62,99 @@ function UsersAdmin() {
     finally { setSaving(null); }
   };
 
+  const workbookWps = records.of("wps")
+    .filter((r) => r.source_kind === "imported")
+    .sort((a, b) => a.rid.localeCompare(b.rid));
+
   return <div className="space-y-6">
     <header><p className="label-caps">Administration</p><h1 className="font-display text-3xl font-semibold">User Roles</h1><p className="text-sm text-muted-foreground">Manage one governed application role per user. Changes are protected by Supabase RLS.</p></header>
-    <section className="maritime-card p-5 space-y-4"><div className="flex items-center justify-between"><div><p className="label-caps">Record Administration</p><h2 className="font-display text-2xl">Add · Edit · Delete</h2><p className="text-sm text-muted-foreground">All register actions use the governed record forms and MASTER_DATA dropdowns.</p></div><Link to="/user-guide"><Button variant="outline"><BookOpen className="mr-1 h-4 w-4"/>User Guide</Button></Link></div><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{ADMIN_REGISTERS.map(([key,label])=><Link key={key} to="/r/$entity" params={{entity:key}} className="flex items-center justify-between rounded-md border border-border p-3 hover:bg-accent"><span className="text-sm font-medium">{label}</span><span className="flex gap-1 text-muted-foreground"><Plus className="h-3.5 w-3.5"/><Pencil className="h-3.5 w-3.5"/><Trash2 className="h-3.5 w-3.5"/></span></Link>)}</div></section>
+
+    <section className="maritime-card overflow-hidden">
+      <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="label-caps">WPS relationship control</p>
+          <h2 className="font-display text-2xl">Dynamic WPS Control Matrix</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Live counts resolved from the imported PMS11 workbook records. WPS is the primary axis; no relationship totals are hard-coded.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => records.refetch()}
+          disabled={records.isFetching}
+          title="Refresh workbook-derived relationship counts"
+        >
+          <RefreshCw className={`mr-1 h-4 w-4 ${records.isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[980px] text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="label-caps px-4 py-3 text-left">WPS</th>
+              {WPS_COUNT_COLUMNS.map(([key, label]) => (
+                <th key={key} className="label-caps px-4 py-3 text-center">{label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {workbookWps.map((wps) => {
+              const counts = wpsRelationshipCounts(wps, records.all);
+              return (
+                <tr key={wps.rid} className="border-b border-border/50 last:border-0 hover:bg-accent/30">
+                  <td className="px-4 py-3">
+                    <Link
+                      to="/r/$entity"
+                      params={{ entity: "wps" }}
+                      className="font-mono font-semibold text-primary hover:underline"
+                    >
+                      {wps.rid}
+                    </Link>
+                  </td>
+                  {WPS_COUNT_COLUMNS.map(([key]) => (
+                    <td key={key} className="px-4 py-3 text-center font-mono tabular-nums">
+                      {counts[key as keyof typeof counts]}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="border-t border-border bg-muted/20 px-5 py-3 text-xs text-muted-foreground">
+        {records.isLoading
+          ? "Loading workbook relationships…"
+          : `${workbookWps.length} imported WPS shown. Derived WPS-25 to WPS-27 are excluded from this 24-WPS workbook control matrix.`}
+      </div>
+    </section>
+
+    <section className="maritime-card p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="label-caps">Record Administration</p>
+          <h2 className="font-display text-2xl">Add · Edit · Delete</h2>
+          <p className="text-sm text-muted-foreground">All register actions use the governed record forms and MASTER_DATA dropdowns.</p>
+        </div>
+        <Link to="/user-guide"><Button variant="outline"><BookOpen className="mr-1 h-4 w-4"/>User Guide</Button></Link>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {ADMIN_REGISTERS.map(([key,label]) => (
+          <Link key={key} to="/r/$entity" params={{entity:key}} className="flex items-center justify-between rounded-md border border-border p-3 hover:bg-accent">
+            <span className="text-sm font-medium">{label}</span>
+            <span className="flex gap-1 text-muted-foreground"><Plus className="h-3.5 w-3.5"/><Pencil className="h-3.5 w-3.5"/><Trash2 className="h-3.5 w-3.5"/></span>
+          </Link>
+        ))}
+      </div>
+    </section>
+
     <div className="maritime-card overflow-hidden">
-      <table className="w-full text-sm"><thead><tr className="border-b border-border"><th className="label-caps px-4 py-3 text-left">User</th><th className="label-caps px-4 py-3 text-left">Current role</th><th className="label-caps px-4 py-3 text-left">Set role</th></tr></thead>
-      <tbody>{(q.data ?? []).map((u) => <tr key={u.id} className="border-b border-border/50"><td className="px-4 py-3"><p>{u.display_name || "—"}</p><p className="text-xs text-muted-foreground">{u.email || u.id}</p></td><td className="px-4 py-3"><span className="rid">{u.roles.join(", ") || "none"}</span></td><td className="px-4 py-3"><div className="flex gap-2"><Select value={u.roles[0] ?? ""} onValueChange={(v) => setRole(u.id, v as Role)} disabled={saving === u.id}><SelectTrigger className="w-40"><SelectValue placeholder="Choose role" /></SelectTrigger><SelectContent>{ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select><Button size="sm" variant="outline" disabled={saving === u.id} onClick={() => setRole(u.id, (u.roles[0] ?? "viewer") as Role)}><ShieldCheck className="mr-1 h-3.5 w-3.5" />Save</Button></div></td></tr>)}</tbody></table>
+      <table className="w-full text-sm">
+        <thead><tr className="border-b border-border"><th className="label-caps px-4 py-3 text-left">User</th><th className="label-caps px-4 py-3 text-left">Current role</th><th className="label-caps px-4 py-3 text-left">Set role</th></tr></thead>
+        <tbody>{(q.data ?? []).map((u) => <tr key={u.id} className="border-b border-border/50"><td className="px-4 py-3"><p>{u.display_name || "—"}</p><p className="text-xs text-muted-foreground">{u.email || u.id}</p></td><td className="px-4 py-3"><span className="rid">{u.roles.join(", ") || "none"}</span></td><td className="px-4 py-3"><div className="flex gap-2"><Select value={u.roles[0] ?? ""} onValueChange={(v) => setRole(u.id, v as Role)} disabled={saving === u.id}><SelectTrigger className="w-40"><SelectValue placeholder="Choose role" /></SelectTrigger><SelectContent>{ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select><Button size="sm" variant="outline" disabled={saving === u.id} onClick={() => setRole(u.id, (u.roles[0] ?? "viewer") as Role)}><ShieldCheck className="mr-1 h-3.5 w-3.5" />Save</Button></div></td></tr>)}</tbody>
+      </table>
       {!q.data?.length && <div className="p-6 text-sm text-muted-foreground">No profiles found.</div>}
     </div>
   </div>;
