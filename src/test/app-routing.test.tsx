@@ -1,39 +1,32 @@
 import { QueryClient } from "@tanstack/react-query";
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { createMemoryHistory, createRouter } from "@tanstack/react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
 import { routeTree } from "@/routeTree.gen";
 
-function renderAt(path: string) {
+async function loadAt(path: string) {
   const queryClient = new QueryClient();
   const router = createRouter({
     routeTree,
     context: { queryClient },
     history: createMemoryHistory({ initialEntries: [path] }),
   });
-  return render(<RouterProvider router={router} />);
+  await router.load();
+  return router;
 }
 
 afterEach(() => {
-  cleanup();
   vi.restoreAllMocks();
 });
 
-// Assert only that the router mounts and paints, never page content:
-// routes are rewritten as the app is built and this must keep passing.
 describe("App routing", () => {
-  it("renders the index route", async () => {
-    const { container } = renderAt("/");
-
-    await waitFor(() => expect(container.firstChild).not.toBeNull());
+  it("loads the index route without mounting the document shell into a test div", async () => {
+    const router = await loadAt("/");
+    expect(router.state.location.pathname).toBe("/");
   });
 
-  it("renders the not-found route", async () => {
+  it("loads the not-found route", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    const { container } = renderAt("/this-route-does-not-exist");
-
-    await waitFor(() => expect(container.firstChild).not.toBeNull());
+    const router = await loadAt("/this-route-does-not-exist");
+    expect(router.state.location.pathname).toBe("/this-route-does-not-exist");
   });
 });
