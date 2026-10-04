@@ -12,7 +12,7 @@ import { StatusBadge, SourceBadge } from "@/components/badges";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { blockers, CLOSABLE, ENTITY_LABEL, isExpired, statusOptions, useInvalidateRecords, useRecords, type Rec } from "@/lib/records";
-import { useGovernedApplicability, useGovernedCriticality, useGovernedStatus, useSetupList } from "@/lib/setup-metadata";
+import { useSetupList } from "@/lib/setup-metadata";
 import { runEvidenceAssessment } from "@/lib/ai-assess.functions";
 
 const Ctx = createContext<{ open: (id: string) => void }>({ open: () => {} });
@@ -32,10 +32,9 @@ function Detail({id}:{id:string}){
   if(!r)return null;
   const rd=(r.data??{}) as Record<string,unknown>; const bl=CLOSABLE.includes(r.entity)?blockers(r,get):[];
   const governedStatus=useSetupList(r.entity,"status"); const governedCriticality=useSetupList(r.entity,"criticality"); const governedApplicability=useSetupList(r.entity,"applicability");
-  const allGovernedStatus=useGovernedStatus(); const allGovernedCriticality=useGovernedCriticality(); const allGovernedApplicability=useGovernedApplicability();
-  const statusValues=[...new Set([r.status,...governedStatus,...allGovernedStatus,...statusOptions(r.entity)].filter(Boolean) as string[])];
-  const criticalityValues=[...new Set([r.criticality,...governedCriticality,...allGovernedCriticality].filter(Boolean) as string[])];
-  const applicabilityValues=[...new Set([r.applicability,...governedApplicability,...allGovernedApplicability].filter(Boolean) as string[])];
+  const statusValues=[...new Set([r.status,...governedStatus,...statusOptions(r.entity)].filter(Boolean) as string[])];
+  const criticalityValues=[...new Set([r.criticality,...governedCriticality].filter(Boolean) as string[])];
+  const applicabilityValues=[...new Set([r.applicability,...governedApplicability].filter(Boolean) as string[])];
   const ownerValues=[...new Set(all.flatMap(x=>{const d=(x.data??{}) as Record<string,unknown>; return [x.owner,d["Owner Department"],d["Responsible Department"],d["Department"]].filter((v):v is string=>typeof v==="string"&&v.trim().length>0&&!/^(tbc|to be assigned|rule\/wps owner)$/i.test(v.trim()));}))].sort((a,b)=>a.localeCompare(b));
   const save=async(patch:Partial<Rec>)=>{const{error}=await supabase.from("records").update(patch as never).eq("id",r.id);if(error)return toast.error(error.message);toast.success("Saved");inval();};
   const review=async(decision:string)=>{const kind=r.entity==="gate"?"gate":"review";const{error}=await supabase.from("reviews").insert({record_id:r.id,decision,comment,kind,reviewer_name:user?.email} as never);if(error)return toast.error(error.message);const patch:Partial<Rec>=r.entity==="gate"?{status:decision,no_go_active:decision==="No-Go"}:r.entity==="evidence"?{status:decision==="Approved"?"Accepted":"Rejected",review_status:decision}:{review_status:decision};await save(patch);setComment("");reviews.refetch();};
