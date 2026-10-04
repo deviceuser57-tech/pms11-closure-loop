@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   blockers,
   evidenceIdsForRecord,
+  wpsRelationships,
   CLOSABLE,
   ENTITY_LABEL,
   isExpired,
@@ -128,6 +129,7 @@ function Detail({ id }: { id: string }) {
   if (!record) return null;
 
   const sourceData = (record.data ?? {}) as Record<string, unknown>;
+  const wpsLinks = record.entity === "wps" ? wpsRelationships(record, all) : null;
   const closureBlockers = CLOSABLE.includes(record.entity)
     ? blockers(record, get, all)
     : [];
@@ -598,8 +600,52 @@ function Detail({ id }: { id: string }) {
 
       <section className="space-y-2">
         <FieldLabel>Acceptance criteria</FieldLabel>
-        {linked(record.acceptance_ids, "acceptance")}
+        {linked(record.entity === "wps" ? (wpsLinks?.acceptance ?? []) : record.acceptance_ids, "acceptance")}
       </section>
+
+      {wpsLinks ? (
+        <section className="space-y-3 rounded-md border border-primary/20 p-3">
+          <div className="flex items-center justify-between">
+            <FieldLabel>WPS relationship control</FieldLabel>
+            <span className="text-[10px] font-mono text-muted-foreground">SOURCE-DRIVEN</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {([
+              ["Rules", wpsLinks.rule],
+              ["Evidence", wpsLinks.evidence],
+              ["Activities", wpsLinks.activity],
+              ["Deliverables", wpsLinks.deliverable],
+              ["Tasks", wpsLinks.task],
+              ["Gaps", wpsLinks.gap],
+              ["Acceptance", wpsLinks.acceptance],
+              ["RACI", wpsLinks.responsibility],
+              ["Risks", wpsLinks.risk],
+            ] as const).map(([label, ids]) => (
+              <div key={label} className="rounded border border-border/70 p-2">
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+                <div className="mt-1 font-mono text-lg font-semibold">{ids.length}</div>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            {([
+              ["Rules", wpsLinks.rule],
+              ["Evidence", wpsLinks.evidence],
+              ["Activities", wpsLinks.activity],
+              ["Deliverables", wpsLinks.deliverable],
+              ["Tasks", wpsLinks.task],
+              ["Gaps", wpsLinks.gap],
+              ["Acceptance", wpsLinks.acceptance],
+              ["RACI", wpsLinks.responsibility],
+              ["Risks", wpsLinks.risk],
+            ] as const).filter(([, ids]) => ids.length > 0).map(([label, ids]) => (
+              <div key={label} className="text-xs">
+                <span className="font-semibold">{label}:</span> <span className="font-mono text-muted-foreground">{ids.join(", ")}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null
 
       {record.links.length > 0 ? (
         <section className="space-y-2">
