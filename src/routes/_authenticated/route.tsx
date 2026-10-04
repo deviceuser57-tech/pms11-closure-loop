@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Anchor, ClipboardCheck, FileText, Gauge, History, Layers, ListChecks, LogOut, Scale, ShieldAlert, Ship, Upload, Users } from "lucide-react";
+import { Anchor, BookOpen, ClipboardCheck, FileText, Gauge, History, Layers, ListChecks, LogOut, Scale, ShieldAlert, Ship, Upload, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { RecordSheetProvider, useRecordSheet } from "@/components/RecordSheet";
@@ -30,6 +30,7 @@ const NAV = [
   { to: "/r/change", label: "Changes", icon: History },
   { to: "/r/equipment", label: "Vessel & Equipment", icon: Ship },
   { to: "/ai-review", label: "AI Evidence Review", icon: FileText },
+  { to: "/user-guide", label: "User Guide", icon: BookOpen },
   { to: "/audit", label: "Audit & Reports", icon: History },
   { to: "/import", label: "Workbook Import", icon: Upload },
 ] as const;
