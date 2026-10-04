@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ENTITY_LABEL, evidenceState, useRecords } from "@/lib/records";
+import { useSetupList } from "@/lib/setup-metadata";
 
 export const Route = createFileRoute("/_authenticated/r/$entity")({
   head: ({ params }) => ({ meta: [{ title: `${ENTITY_LABEL[params.entity] ?? "Register"} — PMS 11 Closure Loop` }] }),
@@ -35,7 +36,10 @@ function Register() {
   const { of, get, isLoading, refetch } = useRecords();
   const { canEdit } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", owner: "", due_date: "", criticality: "Medium" });
+  const [form, setForm] = useState({ title: "", description: "", owner: "", due_date: "", status: "Not Started", criticality: "", applicability: "" });
+  const statusValues = useSetupList(entity, "status");
+  const criticalityValues = useSetupList(entity, "criticality");
+  const applicabilityValues = useSetupList(entity, "applicability");
   const rows = of(entity);
   const ownerValues = [...new Set(of("responsibility").flatMap(x => {
     const d = (x.data ?? {}) as Record<string, unknown>;
@@ -49,6 +53,25 @@ function Register() {
     : entity === "gap" ? [{ key: "rid", label: "ID", width: "w-24" }, { key: "title", label: "Finding" }, { key: "criticality", label: "Criticality", width: "w-24", render: (r) => <StatusBadge value={r.criticality} /> }, { key: "owner", label: "Owner", width: "w-36" }, { key: "due_date", label: "Due", width: "w-24" }, ev, { key: "status", label: "Status", width: "w-28" }]
     : ["rule", "wps", "task"].includes(entity) ? [{ key: "rid", label: "ID", width: "w-28" }, { key: "title", label: "Title" }, { key: entity === "wps" ? "gate_id" : "wps_id", label: entity === "wps" ? "Gate" : "WPS", width: "w-20" }, { key: "owner", label: "Owner", width: "w-36" }, ev, { key: "status", label: "Status", width: "w-28" }]
     : undefined;
+  const createRecord = async () => {
+    if (!canEdit) return;
+    if (!form.title.trim()) return toast.error("Title is required.");
+    const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
+    const rid = entity.toUpperCase() + "-NEW-" + stamp;
+    const { error } = await supabase.from("records").insert({
+      entity, rid, title: form.title.trim(), description: form.description.trim() || null,
+      owner: form.owner || null, due_date: form.due_date || null,
+      status: form.status || statusValues[0] || "Not Started",
+      criticality: form.criticality || null, applicability: form.applicability || null,
+      source_kind: "user", review_status: "Pending", data: { "Created in app": true },
+    } as never);
+    if (error) return toast.error(error.message);
+    toast.success(rid + " created");
+    setForm({ title: "", description: "", owner: "", due_date: "", status: statusValues[0] || "Not Started", criticality: "", applicability: "" });
+    setShowCreate(false);
+    refetch();
+  };
+
   const createChange = async () => {
     if (!form.title.trim()) return toast.error("Change title is required.");
     const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
@@ -59,12 +82,12 @@ function Register() {
       status: "Raised", source_kind: "user", review_status: "Pending", data: { "Change Request": "Created in Changes Register" },
     } as never);
     if (error) return toast.error(error.message);
-    toast.success(`${rid} created`); setForm({ title: "", description: "", owner: "", due_date: "", criticality: "Medium" }); setShowCreate(false); refetch();
+    toast.success(`${rid} created`); setForm({ title: "", description: "", owner: "", due_date: "", status: statusValues[0] || "Not Started", criticality: "", applicability: "" }); setShowCreate(false); refetch();
   };
   return (
     <div className="space-y-4">
-      <header className="flex items-end justify-between gap-4"><div><h1 className="font-display text-3xl font-semibold">{title}</h1><p className="text-sm text-muted-foreground">{sub}</p></div>{entity === "change" && canEdit && <Button onClick={() => setShowCreate((v) => !v)}><Plus className="mr-1 h-4 w-4" />New Change Request</Button>}</header>
-      {entity === "change" && showCreate && canEdit && <div className="maritime-card grid gap-3 p-4 md:grid-cols-2"><div className="space-y-1 md:col-span-2"><label className="label-caps">Change title *</label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Describe the proposed change" /></div><div className="space-y-1 md:col-span-2"><label className="label-caps">Description / rationale</label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Owner / Department</label><Select value={form.owner} onValueChange={(v) => setForm({ ...form, owner: v })}><SelectTrigger><SelectValue placeholder="Select owner / department" /></SelectTrigger><SelectContent>{ownerValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div><div className="space-y-1"><label className="label-caps">Due date</label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Criticality</label><Input value={form.criticality} onChange={(e) => setForm({ ...form, criticality: e.target.value })} /></div><div className="flex items-end"><Button onClick={createChange}>Create Change Request</Button></div></div>}
+      <header className="flex items-end justify-between gap-4"><div><h1 className="font-display text-3xl font-semibold">{title}</h1><p className="text-sm text-muted-foreground">{sub}</p></div>{canEdit && <Button onClick={() => setShowCreate((v) => !v)}><Plus className="mr-1 h-4 w-4" />{entity === "change" ? "New Change Request" : "Add Record"}</Button>}</header>
+      {entity !== "change" && showCreate && canEdit && <div className="maritime-card grid gap-3 p-4 md:grid-cols-2"><div className="space-y-1 md:col-span-2"><label className="label-caps">Title *</label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Record title" /></div><div className="space-y-1 md:col-span-2"><label className="label-caps">Description</label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Owner / Department</label><Select value={form.owner} onValueChange={(v) => setForm({ ...form, owner: v })}><SelectTrigger><SelectValue placeholder="Select owner / department" /></SelectTrigger><SelectContent>{ownerValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div><div className="space-y-1"><label className="label-caps">Due date</label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Status</label><Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger><SelectContent>{statusValues.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div><div className="space-y-1"><label className="label-caps">Criticality</label><Select value={form.criticality} onValueChange={(v) => setForm({ ...form, criticality: v })}><SelectTrigger><SelectValue placeholder="Select criticality" /></SelectTrigger><SelectContent>{criticalityValues.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>{applicabilityValues.length>0&&<div className="space-y-1"><label className="label-caps">Applicability</label><Select value={form.applicability} onValueChange={(v) => setForm({ ...form, applicability: v })}><SelectTrigger><SelectValue placeholder="Select applicability" /></SelectTrigger><SelectContent>{applicabilityValues.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>}<div className="flex items-end gap-2"><Button onClick={createRecord}>Add Record</Button><Button variant="outline" onClick={()=>setShowCreate(false)}>Cancel</Button></div></div>}{entity === "change" && showCreate && canEdit && <div className="maritime-card grid gap-3 p-4 md:grid-cols-2"><div className="space-y-1 md:col-span-2"><label className="label-caps">Change title *</label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Describe the proposed change" /></div><div className="space-y-1 md:col-span-2"><label className="label-caps">Description / rationale</label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Owner / Department</label><Select value={form.owner} onValueChange={(v) => setForm({ ...form, owner: v })}><SelectTrigger><SelectValue placeholder="Select owner / department" /></SelectTrigger><SelectContent>{ownerValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div><div className="space-y-1"><label className="label-caps">Due date</label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div><div className="space-y-1"><label className="label-caps">Criticality</label><Select value={form.criticality} onValueChange={(v) => setForm({ ...form, criticality: v })}><SelectTrigger><SelectValue placeholder="Select criticality" /></SelectTrigger><SelectContent>{criticalityValues.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div><div className="flex items-end"><Button onClick={createChange}>Create Change Request</Button></div></div>}
       {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : !rows.length ? <p className="maritime-card p-6 text-sm text-muted-foreground">No data yet. An Admin can load the workbook from Workbook Import.</p> : <RecordTable title={title} rows={rows} cols={cols} filters={entity === "gap" ? ["vessel", "status", "owner", "wps", "due", "closure"] : undefined} />}
     </div>
   );
