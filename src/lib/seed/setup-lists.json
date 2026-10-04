@@ -6,7 +6,7 @@
   },
   "WPS": {
     "Applicability Status": ["Conditional / Information Gap"],
-    "WPS Status": ["Approved","Closed","Completed","Confirmed","In Progress","Not Applicable","Not Started","On Hold","Open","Planned","Rejected","Submitted","Verified"]
+    "WPS Status": ["Approved","Closed","Completed","In Progress","Not Applicable","Not Started","On Hold","Open","Planned","Rejected","Submitted","Verified"]
   },
   "Activities": {
     "Applicability Status": ["Conditional","Confirmed","Confirmed in principle","Confirmed methodology"]
@@ -16,7 +16,7 @@
     "Status": ["Approved","Closed","Completed","In Progress","Not Applicable","Not Opened","Not Started","On Hold","Open","Rejected","Submitted","Verified"]
   },
   "Evidence": {
-    "Status": ["Approved","Closed","Completed","Finish-to-Start","In Progress","Missing","Missing / To Verify","Not Applicable","Not Started","On Hold","Open","Rejected","Submitted","Verified"]
+    "Status": ["Approved","Closed","Completed","In Progress","Missing","Missing / To Verify","Not Applicable","Not Started","On Hold","Open","Rejected","Submitted","Verified"]
   },
   "Execution": {
     "Relationship Type": ["FS","Finish-to-Start"],
