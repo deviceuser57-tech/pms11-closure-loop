@@ -58,11 +58,21 @@ function Register() {
     { key: "responsibility_count", label: "RACI", width: "w-20", render: (r) => <span className="font-mono text-xs">{wpsRelationshipCounts(r, all).responsibility}</span> },
     { key: "risk_count", label: "Risks", width: "w-20", render: (r) => <span className="font-mono text-xs">{wpsRelationshipCounts(r, all).risk}</span> },
   ] : [];
+  const baseLinkedCols: Col[] = [
+    { key: "rid", label: "ID", width: "w-28" },
+    { key: "title", label: "Title" },
+    { key: "wps_id", label: "WPS", width: "w-20" },
+    { key: "owner", label: "Owner", width: "w-36" },
+    ev,
+    { key: "status", label: "Status", width: "w-28" },
+  ];
+
   const cols: Col[] | undefined =
     entity === "evidence" ? [{ key: "rid", label: "ID", width: "w-24" }, { key: "title", label: "Document" }, { key: "doc_number", label: "Doc no.", width: "w-24" }, { key: "issuer", label: "Issuer", width: "w-40" }, { key: "expiry_date", label: "Expiry", width: "w-24" }, { key: "status", label: "Status", width: "w-28" }]
     : entity === "gate" ? [{ key: "rid", label: "Gate", width: "w-24" }, { key: "title", label: "Name" }, { key: "nogo", label: "No-Go", width: "w-24", render: (r) => r.no_go_active ? <StatusBadge value="No-Go" /> : <span className="text-xs text-muted-foreground">—</span> }, { key: "status", label: "Decision", width: "w-28" }]
     : entity === "gap" ? [{ key: "rid", label: "ID", width: "w-24" }, { key: "title", label: "Finding" }, { key: "criticality", label: "Criticality", width: "w-24", render: (r) => <StatusBadge value={r.criticality} /> }, { key: "owner", label: "Owner", width: "w-36" }, { key: "due_date", label: "Due", width: "w-24" }, ev, { key: "status", label: "Status", width: "w-28" }]
-    : entity === "wps" ? [{ key: "rid", label: "ID", width: "w-28" }, { key: "title", label: "Title" }, { key: "gate_id", label: "Gate", width: "w-20" }, { key: "owner", label: "Owner", width: "w-36" }, ...wpsCounts, { key: "status", label: "Status", width: "w-28" }] : ["rule", "task"].includes(entity) ? [{ key: "rid", label: "ID", width: "w-28" }, { key: "title", label: "Title" }, { key: "wps_id", label: "WPS", width: "w-20" }, { key: "owner", label: "Owner", width: "w-36" }, ev, { key: "status", label: "Status", width: "w-28" }]
+    : entity === "wps" ? [{ key: "rid", label: "ID", width: "w-28" }, { key: "title", label: "Title" }, { key: "gate_id", label: "Gate", width: "w-20" }, { key: "owner", label: "Owner", width: "w-36" }, ...wpsCounts, { key: "status", label: "Status", width: "w-28" }]
+    : ["rule", "task", "activity", "deliverable", "acceptance", "responsibility", "risk"].includes(entity) ? baseLinkedCols
     : undefined;
   const createRecord = async () => {
     if (!canEdit) return;
