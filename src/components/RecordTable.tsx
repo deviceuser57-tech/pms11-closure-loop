@@ -51,7 +51,7 @@ export function RecordTable({ rows, cols = DEFAULT_COLS, title, filters = ["stat
     if (due === "overdue" && !isOverdue(r)) return false;
     if (due === "30d" && !(r.due_date && r.due_date >= today && r.due_date <= in30)) return false;
     if (due === "none" && r.due_date) return false;
-    if (closure !== ALL && closureClass(r, get) !== closure) return false;
+    if (closure !== ALL && closureClass(r, get, all) !== closure) return false;
     if (q) {
       const s = q.toLowerCase();
       if (!`${r.rid} ${r.title} ${r.description ?? ""} ${r.owner ?? ""}`.toLowerCase().includes(s)) return false;
