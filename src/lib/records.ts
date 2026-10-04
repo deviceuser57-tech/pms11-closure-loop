@@ -58,9 +58,43 @@ export function useInvalidateRecords() {
   return () => qc.invalidateQueries({ queryKey: ["records"] });
 }
 
+/** Resolve evidence from both explicit links and the workbook's reverse WPS mapping.
+ * Evidence rows may reference one or several WPS IDs in data["WPS IDs"]; the normalized
+ * evidence.wps_id field only preserves a single WPS when the source contains exactly one.
+ */
+export function evidenceIdsForRecord(
+  r: Rec,
+  all: Rec[],
+): string[] {
+  const explicit = Array.isArray(r.evidence_ids) ? r.evidence_ids : [];
+  if (r.entity !== "wps") return [...new Set(explicit)];
+
+  const reverse = all
+    .filter((item) => item.entity === "evidence")
+    .filter((item) => {
+      if (item.wps_id === r.rid) return true;
+      const data = (item.data ?? {}) as Record<string, unknown>;
+      const raw = data["WPS IDs"];
+      const ids = Array.isArray(raw)
+        ? raw.map(String)
+        : typeof raw === "string"
+          ? raw.split(/[;,]/).map((value) => value.trim()).filter(Boolean)
+          : [];
+      return ids.includes(r.rid);
+    })
+    .map((item) => item.rid);
+
+  return [...new Set([...explicit, ...reverse])];
+}
+
 /** Evidence validity for an item: accepted and not expired. */
-export function evidenceState(r: Rec, get: (e: string, rid: string) => Rec | undefined) {
-  const items = r.evidence_ids.map((id) => ({ id, rec: get("evidence", id) }));
+export function evidenceState(
+  r: Rec,
+  get: (e: string, rid: string) => Rec | undefined,
+  all?: Rec[],
+) {
+  const ids = evidenceIdsForRecord(r, all ?? []);
+  const items = ids.map((id) => ({ id, rec: get("evidence", id) }));
   const valid = items.filter((i) => i.rec && i.rec.status === "Accepted" && !isExpired(i.rec)).length;
   return { items, valid, total: items.length };
 }
