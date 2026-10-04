@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ENTITY_LABEL, evidenceState, relatedRecordIds, wpsRelationshipCounts, useRecords } from "@/lib/records";
+import { ENTITY_LABEL, evidenceState, wpsRelationshipCounts, useRecords } from "@/lib/records";
 import { useSetupList } from "@/lib/setup-metadata";
 
 export const Route = createFileRoute("/_authenticated/r/$entity")({
