@@ -41,7 +41,7 @@ function AuthPage() {
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="maritime-card w-full max-w-sm space-y-5 p-6">
-        <div className="flex items-center gap-2"><Anchor className="h-6 w-6 text-primary" /><div><p className="font-display text-2xl font-semibold">PMS 11 Closure Loop</p><p className="label-caps">IMO 7511826 · Readiness & closure</p></div></div>
+        <div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Anchor className="h-6 w-6" /></span><div><p className="font-display text-2xl font-semibold">PMS 11 Closure Loop</p><p className="label-caps">IMO 7511826 · Readiness & closure</p></div></div>
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1"><Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Email *</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
           <div className="space-y-1"><Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Password *</Label><Input type="password" required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} /></div>

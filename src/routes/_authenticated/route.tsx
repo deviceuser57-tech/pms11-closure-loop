@@ -36,25 +36,27 @@ function Shell() {
   return (
     <RecordSheetProvider>
       <div className="flex min-h-screen">
-        <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-          <div className="flex items-center gap-2 border-b border-sidebar-border px-4 py-4">
-            <Anchor className="h-5 w-5 text-primary" />
-            <div><p className="font-display text-lg font-semibold leading-none tracking-wide">PMS 11</p><p className="label-caps mt-1">Closure Loop</p></div>
+        <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl shadow-slate-900/10">
+          <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-sm">
+              <Anchor className="h-5 w-5" />
+            </span>
+            <div><p className="font-display text-xl font-semibold leading-none tracking-wide">PMS 11</p><p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/60">Closure Loop</p></div>
           </div>
           <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
             {NAV.map((n) => (
-              <Link key={n.to} to={n.to as "/dashboard"} className="flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent" activeProps={{ className: "bg-sidebar-accent text-primary" }}>
+              <Link key={n.to} to={n.to as "/dashboard"} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/78 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" activeProps={{ className: "bg-sidebar-accent text-sidebar-primary" }}>
                 <n.icon className="h-4 w-4" />{n.label}
               </Link>
             ))}
           </nav>
-          <div className="border-t border-sidebar-border p-3 text-xs">
+          <div className="border-t border-sidebar-border p-4 text-xs">
             <p className="truncate">{user?.email}</p>
-            <p className="label-caps mt-0.5">{roles.join(", ") || "no role"}</p>
-            <button onClick={async () => { await supabase.auth.signOut(); nav({ to: "/auth", replace: true }); }} className="mt-2 flex items-center gap-1 text-muted-foreground hover:text-foreground"><LogOut className="h-3 w-3" />Sign out</button>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/55">{roles.join(", ") || "no role"}</p>
+            <button onClick={async () => { await supabase.auth.signOut(); nav({ to: "/auth", replace: true }); }} className="mt-3 flex items-center gap-1 text-sidebar-foreground/60 hover:text-sidebar-foreground"><LogOut className="h-3 w-3" />Sign out</button>
           </div>
         </aside>
-        <main className="min-w-0 flex-1 p-6"><Outlet /></main>
+        <main className="min-w-0 flex-1 p-6 lg:p-8"><Outlet /></main>
       </div>
     </RecordSheetProvider>
   );
