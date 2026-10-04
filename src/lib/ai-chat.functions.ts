@@ -14,10 +14,10 @@ export const askPms11AI = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => input.parse(d))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase.from("records").select("*").limit(5000);
+    const { data: rows, error } = await context.supabase.from("records").select("id,entity,rid,title,description,wps_id,gate_id,parent_id,status,owner,department,due_date,criticality,review_status,evidence_ids,acceptance_ids,execution_note").limit(5000);
     if (error) throw error;
 
-    const compact = (rows ?? []).map((r) => ({
+    const visibleRows = data.wps ? (rows ?? []).filter((r) => r.rid === data.wps || r.wps_id === data.wps || r.parent_id === data.wps) : (rows ?? []);\n    const compact = visibleRows.slice(0, 2000).map((r) => ({
       id:r.rid, entity:r.entity, title:r.title, wps:r.wps_id, gate:r.gate_id,
       status:r.status, owner:r.owner, department:r.department, due:r.due_date,
       criticality:r.criticality, review:r.review_status, evidence:r.evidence_ids,
