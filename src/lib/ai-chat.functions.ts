@@ -22,7 +22,6 @@ export const askPms11AI = createServerFn({ method: "POST" })
       status:r.status, owner:r.owner, department:r.department, due:r.due_date,
       criticality:r.criticality, review:r.review_status, evidence:r.evidence_ids,
       acceptance:r.acceptance_ids, parent:r.parent_id, execution:r.execution_note,
-      data:r.data,
     }));
 
     const key = process.env["LOVABLE_API_KEY"];
