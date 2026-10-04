@@ -28,6 +28,11 @@ export function useSetupList(entity: string, field: "status" | "criticality" | "
   return setupList(sheet, keys);
 }
 
+/** Non-reactive governed status resolver for shared record utilities. */
+export function governedStatusOptions(entity: string): string[] {
+  return useSetupList(entity, "status");
+}
+
 /** All governed criticality values actually present in MASTER_DATA/LISTS. */
 export function useGovernedCriticality(): string[] {
   return unique(Object.values(L).flatMap((s) => pick(s, ["Criticality", "Risk Level"])));

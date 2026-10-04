@@ -645,7 +645,7 @@ function Detail({ id }: { id: string }) {
             ))}
           </div>
         </section>
-      ) : null
+      ) : null}
 
       {record.links.length > 0 ? (
         <section className="space-y-2">
