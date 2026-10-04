@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ShieldCheck, UserRoundCog } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,10 +38,8 @@ function UsersAdmin() {
   const setRole = async (userId: string, role: Role) => {
     setSaving(userId);
     try {
-      const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", userId);
-      if (delErr) throw delErr;
-      const { error: insErr } = await supabase.from("user_roles").insert({ user_id: userId, role });
-      if (insErr) throw insErr;
+      const { error } = await supabase.rpc("set_user_role" as never, { _user_id: userId, _role: role } as never);
+      if (error) throw error;
       await q.refetch();
       toast.success("Role updated.");
     } catch (e) { toast.error(e instanceof Error ? e.message : String(e)); }
