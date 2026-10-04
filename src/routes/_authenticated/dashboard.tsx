@@ -41,7 +41,7 @@ function Dashboard() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
         <Kpi label="Overall closure" value={`${pct}%`} sub={`${groups.completed.length}/${closable.length} items`} tone="text-primary" />
         <Kpi label="Open gaps" value={gaps.length} sub={`${crit} critical`} tone={crit ? "text-destructive" : ""} />
-        <Kpi label="Overdue" value={overdue} tone={overdue ? "text-destructive" : ""} />
+        <Kpi label="Overdue" value={overdue.length} tone={overdue.length ? "text-destructive" : ""} />
         <Kpi label="Evidence required" value={required} sub={`of ${ev.length}`} tone="text-warning" />
         <Kpi label="Evidence expired" value={expired} tone={expired ? "text-destructive" : ""} />
         <Kpi label="Gates Go" value={`${gates.filter((g) => g.status === "Go").length}/${gates.length}`} />
