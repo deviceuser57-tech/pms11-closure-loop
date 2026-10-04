@@ -112,10 +112,11 @@ function normalizedIds(item: Rec, relation: string): string[] {
 
 /** Return all records of relationEntity linked to r, using normalized fields and raw workbook IDs. */
 export function relatedRecordIds(r: Rec, relationEntity: string, all: Rec[]): string[] {
-  const direct = normalizedIds(r, relationEntity);
+  const relationRows = all.filter((item) => item.entity === relationEntity);
+  const existing = new Set(relationRows.map((item) => item.rid));
+  const direct = normalizedIds(r, relationEntity).filter((id) => existing.has(id));
   const reverseFields = SOURCE_LINK_FIELDS[relationEntity]?.[r.entity] ?? [];
-  const reverse = all
-    .filter((item) => item.entity === relationEntity)
+  const reverse = relationRows
     .filter((item) => {
       const ids = normalizedIds(item, r.entity);
       if (ids.includes(r.rid)) return true;
