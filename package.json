@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "pms11:seed": "node scripts/generate-pms11-seed.mjs",
+    "pms11:verify-source": "node scripts/verify-pms11-source.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"

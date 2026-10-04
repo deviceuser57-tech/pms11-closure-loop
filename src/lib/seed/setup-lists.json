@@ -1,126 +1,31 @@
 {
- "Rules": {
-  "Applicability Status": [
-   "Conditional",
-   "Confirmed in principle",
-   "Confirmed methodology"
-  ],
-  "Criticality": [
-   "Critical",
-   "Major"
-  ],
-  "Status": [
-   "Approved",
-   "Closed",
-   "Completed",
-   "In Progress",
-   "Not Applicable",
-   "Not Started",
-   "On Hold",
-   "Open",
-   "Rejected",
-   "Submitted",
-   "Verified"
-  ]
- },
- "WPS": {
-  "Applicability Status": [
-   "Conditional / Information Gap"
-  ],
-  "WPS Status": [
-   "Approved",
-   "Closed",
-   "Completed",
-   "In Progress",
-   "Not Applicable",
-   "Not Started",
-   "On Hold",
-   "Open",
-   "Planned",
-   "Rejected",
-   "Submitted",
-   "Verified"
-  ]
- },
- "Activities": {
-  "Applicability Status": [
-   "Conditional",
-   "Confirmed",
-   "Confirmed in principle",
-   "Confirmed methodology"
-  ]
- },
- "Gaps": {
-  "Criticality": [
-   "Critical",
-   "High",
-   "Major"
-  ],
-  "Status": [
-   "Approved",
-   "Closed",
-   "Completed",
-   "In Progress",
-   "Not Applicable",
-   "Not Opened",
-   "Not Started",
-   "On Hold",
-   "Open",
-   "Rejected",
-   "Submitted",
-   "Verified"
-  ]
- },
- "Evidence": {
-  "Status": [
-   "Approved",
-   "Closed",
-   "Completed",
-   "In Progress",
-   "Missing",
-   "Missing / To Verify",
-   "Not Applicable",
-   "Not Started",
-   "On Hold",
-   "Open",
-   "Rejected",
-   "Submitted",
-   "Verified"
-  ]
- },
- "Execution": {
-  "Relationship Type": [
-   "FS",
-   "Finish-to-Start"
-  ],
-  "Currency": [
-   "USD"
-  ],
-  "Procurement Status": [
-   "Not Started"
-  ],
-  "Long Lead Item": [
-   "No"
-  ],
-  "Risk Level": [
-   "Critical",
-   "Major"
-  ]
- },
- "Risks": {
-  "Status": [
-   "Approved",
-   "Closed",
-   "Completed",
-   "In Progress",
-   "Not Applicable",
-   "Not Started",
-   "On Hold",
-   "Open",
-   "Recorded",
-   "Rejected",
-   "Submitted",
-   "Verified"
-  ]
- }
+  "Rules": {
+    "Applicability Status": ["Conditional","Confirmed in principle","Confirmed methodology"],
+    "Criticality": ["Critical","Major"],
+    "Status": ["Approved","Closed","Completed","In Progress","Not Applicable","Not Started","On Hold","Open","Rejected","Submitted","Verified"]
+  },
+  "WPS": {
+    "Applicability Status": ["Conditional / Information Gap"],
+    "WPS Status": ["Approved","Closed","Completed","In Progress","Not Applicable","Not Started","On Hold","Open","Planned","Rejected","Submitted","Verified"]
+  },
+  "Activities": {
+    "Applicability Status": ["Conditional","Confirmed","Confirmed in principle","Confirmed methodology"]
+  },
+  "Gaps": {
+    "Criticality": ["Critical","High","Major"],
+    "Status": ["Approved","Closed","Completed","In Progress","Not Applicable","Not Opened","Not Started","On Hold","Open","Rejected","Submitted","Verified"]
+  },
+  "Evidence": {
+    "Status": ["Approved","Closed","Completed","In Progress","Missing","Missing / To Verify","Not Applicable","Not Started","On Hold","Open","Rejected","Submitted","Verified"]
+  },
+  "Execution": {
+    "Relationship Type": ["FS","Finish-to-Start"],
+    "Currency": ["USD"],
+    "Procurement Status": ["Not Started"],
+    "Long Lead Item": ["No"],
+    "Risk Level": ["Critical","Major"]
+  },
+  "Risks": {
+    "Status": ["Approved","Closed","Completed","In Progress","Not Applicable","Not Started","On Hold","Open","Recorded","Rejected","Submitted","Verified"]
+  }
 }

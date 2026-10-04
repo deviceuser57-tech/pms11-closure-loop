@@ -109,7 +109,7 @@ export function buildPreview() {
   return {
     rowIssues,
     rejectedCount: rowIssues.filter((r) => r.severity === "error").length,
-    workbook: "PMS11_ENTERPRISE_MASTER_DROPDOWNS.xlsx",
+    workbook: "PMS11_POWERPIVOT_READY.xlsx",
     config: { expectedWps: 24, expectedRules: 89 },
     found: { wps: all.filter((r) => r.entity === "wps" && r.source_kind === "imported").length, rules: all.filter((r) => r.entity === "rule").length },
     verification: { worksheet_tables: 22, derived_objects_query: 1, planned_relationships: 22, relationship_schema_errors: 0, embedded_powerpivot_model: false, vba_tested_in_windows_excel: false, model_setup_status: "NOT RUN", relationship_exceptions_file_rows: 93 },
