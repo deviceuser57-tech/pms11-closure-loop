@@ -63,7 +63,7 @@ function Shell() {
                 <n.icon className="h-4 w-4" />{n.label}
               </Link>
             ))}
-            <Link to="/admin/users" className={`flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent ${isAdmin ? "" : "hidden"}`}><Users className="h-4 w-4" />User Roles</Link>
+            <Link to="/admin/users" className={`flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent ${isAdmin ? "" : "hidden"}`}><Users className="h-4 w-4" />Admin Console</Link>
           </nav>
           <div className="border-t border-sidebar-border p-3 text-xs">
             <p className="truncate">{user?.email}</p>
