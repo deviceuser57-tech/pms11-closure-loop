@@ -29,10 +29,12 @@ export const askPms11AI = createServerFn({ method: "POST" })
   .inputValidator((d) => input.parse(d))
   .handler(async ({ data, context }) => {
     // `department` exists in the database but not yet in the generated table types.
-    type AiRec = Tables<"records"> & { department?: string | null };
+    type AiRec = Tables<"records"> & { data?: Record<string, unknown> | null };
+    // Do not select a non-existent `department` column. Department is carried in the
+    // imported workbook payload (`data`) on the current PMS-11 schema.
     const { data: rawRows, error } = await context.supabase
       .from("records")
-      .select("id,entity,rid,title,description,wps_id,gate_id,parent_id,status,owner,department,due_date,criticality,review_status,evidence_ids,acceptance_ids,execution_note")
+      .select("id,entity,rid,title,description,wps_id,gate_id,parent_id,status,owner,due_date,criticality,review_status,evidence_ids,acceptance_ids,execution_note,data")
       .limit(5000);
     const rows = (rawRows ?? []) as unknown as AiRec[];
 
@@ -53,7 +55,13 @@ export const askPms11AI = createServerFn({ method: "POST" })
       gate: r.gate_id,
       status: r.status,
       owner: r.owner,
-      department: r.department,
+      department: typeof r.data?.["Department"] === "string"
+        ? r.data["Department"]
+        : typeof r.data?.["Responsible Department"] === "string"
+          ? r.data["Responsible Department"]
+          : typeof r.data?.["Owner Department"] === "string"
+            ? r.data["Owner Department"]
+            : null,
       due: r.due_date,
       criticality: r.criticality,
       review: r.review_status,
