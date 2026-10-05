@@ -18,20 +18,29 @@ export const runEvidenceAssessment = createServerFn({ method: "POST" })
     const accIds = req.acceptance_ids ?? [];
     const { data: acc } = accIds.length ? await sb.from("records").select("rid,title,description,data").eq("entity", "acceptance").in("rid", accIds) : { data: [] };
 
-    const { data: blob, error: dlErr } = await sb.storage.from("evidence").download(data.filePath);
-    if (dlErr || !blob) return { error: "Could not read the uploaded file." };
-    const name = data.filePath.split("/").pop() ?? "evidence";
-    const type = blob.type || (name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "");
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    if (bytes.length > 20 * 1024 * 1024) return { error: "File is larger than 20 MB." };
+    let name = "pasted-evidence.txt";
+    let type = "text/plain";
+    let bytes = new Uint8Array();
 
-    const criteriaText = (acc ?? []).map((a) => `- ${a.rid}: ${a.title}${a.description ? ` — ${a.description}` : ""}`).join("\n") || "(No acceptance criteria linked — infer from the requirement text and flag this gap.)";
-    const intro = `REQUIREMENT ${req.rid} (${req.entity}): ${req.title}\n${req.description ?? ""}\nWPS: ${req.wps_id ?? "-"} Gate: ${req.gate_id ?? "-"}\n\nACCEPTANCE CRITERIA:\n${criteriaText}\n\nREVIEWER NOTES: ${data.notes ?? "none"}\n\nEVIDENCE FILE: ${name}`;
+    if (data.filePath) {
+      const { data: blob, error: dlErr } = await sb.storage.from("evidence").download(data.filePath);
+      if (dlErr || !blob) return { error: "Could not read the uploaded file." };
+      name = data.filePath.split("/").pop() ?? "evidence";
+      type = blob.type || (name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "");
+      bytes = new Uint8Array(await blob.arrayBuffer());
+      if (bytes.length > 20 * 1024 * 1024) return { error: "File is larger than 20 MB." };
+    } else if (data.evidenceText) {
+      bytes = new TextEncoder().encode(data.evidenceText);
+    }
+
+    const criteriaText = (acc ?? []).map((a) => `- ${a.rid}: ${a.title}${a.description ? ` — ${a.description}` : ""}`).join("\n") || "(No acceptance criteria linked — flag this gap.)";
+    const intro = `REQUIREMENT ${req.rid} (${req.entity}): ${req.title}\n${req.description ?? ""}\nWPS: ${req.wps_id ?? "-"} Gate: ${req.gate_id ?? "-"}\n\nACCEPTANCE CRITERIA:\n${criteriaText}\n\nREVIEWER NOTES: ${data.notes ?? "none"}\n\nEVIDENCE SOURCE: ${name}`;
     const content: unknown[] = [{ type: "text", text: intro }];
-    if (type.startsWith("image/")) content.push({ type: "image", image: bytes, mediaType: type });
+    if (data.evidenceText && !data.filePath) content.push({ type: "text", text: data.evidenceText });
+    else if (type.startsWith("image/")) content.push({ type: "image", image: bytes, mediaType: type });
     else if (type === "application/pdf") content.push({ type: "file", data: bytes, mediaType: "application/pdf", filename: name });
     else if (type.startsWith("text/") || /\.(txt|csv|md|json)$/i.test(name)) content.push({ type: "text", text: new TextDecoder().decode(bytes).slice(0, 60000) });
-    else return { error: "Supported file types: PDF, images, or text files." };
+    else return { error: "Supported evidence types: PDF, PNG/JPG images, or text files." };
 
     const system = `You are a marine assurance reviewer for pipe-lay vessel PMS 11 (IMO 7511826). Assess whether the evidence proves each acceptance criterion. Be strict: certificates need issuer, number, validity dates, vessel identification (incl. previous names PETROJET 11/12, CLEVER TURTLE) and signatures/stamps. Never assume content not visible. Reply ONLY with JSON: {"verdict":"Compliant|Partially Compliant|Non-Compliant|Insufficient Evidence","confidence":0-100,"summary":"max 3 sentences","criteria":[{"criterion":"","met":"Met|Partially Met|Not Met|Cannot Verify","reason":""}],"missing_proof":["..."],"recommended_actions":["..."]}. At most 8 items per list.`;
 
@@ -40,7 +49,6 @@ export const runEvidenceAssessment = createServerFn({ method: "POST" })
     try {
       const { assessEvidence } = await import("./ai-assess.server");
       const result = await assessEvidence(key, system, content as never);
-      await sb.from("reviews").insert({ record_id: req.id, kind: "ai", decision: `AI: ${result.verdict}`, comment: `${result.summary}\nMissing: ${result.missing_proof.join("; ") || "none"}`, reviewer_name: "Lovable AI (advisory)" } as never);
       return { result, requirement: req.rid };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
