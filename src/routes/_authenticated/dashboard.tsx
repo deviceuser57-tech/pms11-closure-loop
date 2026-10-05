@@ -38,12 +38,16 @@ function Dashboard() {
     <div className="space-y-6">
       <header className="flex items-end justify-between"><div><p className="label-caps">PMS 11 · IMO 7511826</p><h1 className="font-display text-4xl font-semibold">Command Center</h1></div>
         <div className="text-right"><p className="label-caps">Final readiness</p><StatusBadge value={ready ? "Go" : "Not ready — No-Go"} className="text-sm" /></div></header>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Link to="/r/wps"><Kpi label="WPS" value={of("wps").length} sub="Work Packages" tone="text-primary" /></Link>
+        <Link to="/r/rule"><Kpi label="Rules" value={of("rule").length} sub="Governing requirements" /></Link>
+        <Link to="/r/activity"><Kpi label="Activities" value={of("activity").length} sub="Execution / verification activities" /></Link>
+        <Link to="/r/task"><Kpi label="Tasks" value={of("task").length} sub="Execution tasks" /></Link>
+      </div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi label="Overall closure" value={`${pct}%`} sub={`${groups.completed.length}/${closable.length} items`} tone="text-primary" />
         <Kpi label="Open gaps" value={gaps.length} sub={`${crit} critical`} tone={crit ? "text-destructive" : ""} />
-        <Kpi label="Overdue" value={overdue.length} tone={overdue.length ? "text-destructive" : ""} />
         <Kpi label="Evidence required" value={required} sub={`of ${ev.length}`} tone="text-warning" />
-        <Kpi label="Evidence expired" value={expired} tone={expired ? "text-destructive" : ""} />
         <Kpi label="Gates Go" value={`${gates.filter((g) => g.status === "Go").length}/${gates.length}`} />
       </div>
       <section className="maritime-card p-4"><p className="label-caps mb-3">Gate status</p>
