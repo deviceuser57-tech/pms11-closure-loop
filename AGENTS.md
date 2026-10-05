@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- The generated Supabase types (src/integrations/supabase/types.ts) can lag behind DB migrations (e.g. the `department` column on records/profiles). Never edit types.ts; where new columns are read, cast rows locally (e.g. `Tables<"records"> & { department?: string | null }`).
