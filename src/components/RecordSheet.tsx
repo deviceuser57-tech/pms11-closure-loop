@@ -571,12 +571,11 @@ function Detail({ id }: { id: string }) {
             />
           </div>
         ) : null}
-      </section>
+      </div>
 
       {canEdit && editing ? (
         <Button onClick={() => save(form)}>Save changes</Button>
       ) : null}
-      </div>
       </section>
 
       <section className="space-y-2">
