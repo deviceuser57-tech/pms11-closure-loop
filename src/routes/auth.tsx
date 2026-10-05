@@ -1,21 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Anchor, Loader2 } from "lucide-react";
 import { enterDemoMode } from "@/lib/demo-auth.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/auth")({
   staticData: { sitemap: true },
   head: () => ({
     meta: [
-      { title: "Sign in — PMS 11 Closure Loop" },
-      { name: "description", content: "Sign in to the PMS 11 readiness and closure tracker." },
-      { property: "og:title", content: "Sign in — PMS 11 Closure Loop" },
-      { property: "og:description", content: "Sign in to the PMS 11 readiness and closure tracker." },
+      { title: "Test Access — PMS 11 Closure Loop" },
+      { name: "description", content: "Temporary demo access for PMS 11 readiness and closure testing." },
     ],
   }),
   component: AuthPage,
@@ -23,9 +19,6 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const nav = useNavigate();
-  const [mode, setMode] = useState<"in" | "up">("in");
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [demoStarting, setDemoStarting] = useState(false);
@@ -92,48 +85,16 @@ function AuthPage() {
     e.preventDefault();
 
     if (busy) return;
-
     setBusy(true);
     setMessage("");
 
     try {
-      if (!email.trim() || !pw) {
-        throw new Error("Enter your email and password.");
-      }
+      const { data: existing, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
 
-      if (mode === "in") {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: pw,
-        });
-
-        if (error) throw error;
-
-        if (!data.session?.user) {
-          await goToDashboard();
-          return;
-        }
-
+      if (existing.session?.user) {
         await nav({ to: "/dashboard", replace: true });
-      } else {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: pw,
-          options: {
-            emailRedirectTo: window.location.origin,
-          },
-        });
-
-        if (error) throw error;
-
-        if (data.session?.user) {
-          toast.success("Account created successfully.");
-          await nav({ to: "/dashboard", replace: true });
-        } else {
-          const text = "Account created. Check your email to confirm the account, then sign in.";
-          setMessage(text);
-          toast.success(text);
-        }
+        return;
       }
     } catch (error) {
       console.error("[Auth] Authentication failed:", error);
@@ -154,7 +115,7 @@ function AuthPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="maritime-card w-full max-w-sm space-y-5 p-6">
+      <div className="maritime-card w-full max-w-md space-y-6 p-7">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Anchor className="h-6 w-6" />
@@ -208,6 +169,11 @@ function AuthPage() {
               disabled={busy}
             />
           </div>
+          <p className="mt-2 text-muted-foreground">
+            Sign-in and sign-up are temporarily disabled. Enter with a real Supabase authenticated
+            demo session so the normal RLS, roles and application logic remain active.
+          </p>
+        </div>
 
           <div className="space-y-1">
             <Label htmlFor="auth-password" className="text-xs font-black uppercase tracking-widest text-muted-foreground">
@@ -232,10 +198,7 @@ function AuthPage() {
         </form>
 
         {message && (
-          <div
-            role="alert"
-            className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
-          >
+          <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
             {message}
           </div>
         )}
