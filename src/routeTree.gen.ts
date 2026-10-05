@@ -18,6 +18,7 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
 import { Route as AuthenticatedReportingRouteImport } from './routes/_authenticated/reporting'
+import { Route as AuthenticatedTraceabilityRouteImport } from './routes/_authenticated/traceability'
 import { Route as AuthenticatedUserGuideRouteImport } from './routes/_authenticated/user-guide'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
 import { Route as AuthenticatedREntityRouteImport } from './routes/_authenticated/r.$entity'
@@ -66,6 +67,12 @@ const AuthenticatedReportingRoute = AuthenticatedReportingRouteImport.update({
   path: '/reporting',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTraceabilityRoute =
+  AuthenticatedTraceabilityRouteImport.update({
+    id: '/traceability',
+    path: '/traceability',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedUserGuideRoute = AuthenticatedUserGuideRouteImport.update({
   id: '/user-guide',
   path: '/user-guide',
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import': typeof AuthenticatedImportRoute
   '/reporting': typeof AuthenticatedReportingRoute
+  '/traceability': typeof AuthenticatedTraceabilityRoute
   '/user-guide': typeof AuthenticatedUserGuideRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/r/$entity': typeof AuthenticatedREntityRoute
@@ -104,6 +112,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import': typeof AuthenticatedImportRoute
   '/reporting': typeof AuthenticatedReportingRoute
+  '/traceability': typeof AuthenticatedTraceabilityRoute
   '/user-guide': typeof AuthenticatedUserGuideRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/r/$entity': typeof AuthenticatedREntityRoute
@@ -119,6 +128,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/reporting': typeof AuthenticatedReportingRoute
+  '/_authenticated/traceability': typeof AuthenticatedTraceabilityRoute
   '/_authenticated/user-guide': typeof AuthenticatedUserGuideRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/r/$entity': typeof AuthenticatedREntityRoute
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/import'
     | '/reporting'
+    | '/traceability'
     | '/user-guide'
     | '/admin/users'
     | '/r/$entity'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/import'
     | '/reporting'
+    | '/traceability'
     | '/user-guide'
     | '/admin/users'
     | '/r/$entity'
@@ -161,6 +173,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/import'
     | '/_authenticated/reporting'
+    | '/_authenticated/traceability'
     | '/_authenticated/user-guide'
     | '/_authenticated/admin/users'
     | '/_authenticated/r/$entity'
@@ -237,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/traceability': {
+      id: '/_authenticated/traceability'
+      path: '/traceability'
+      fullPath: '/traceability'
+      preLoaderRoute: typeof AuthenticatedTraceabilityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/user-guide': {
       id: '/_authenticated/user-guide'
       path: '/user-guide'
@@ -268,6 +288,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedReportingRoute: typeof AuthenticatedReportingRoute
+  AuthenticatedTraceabilityRoute: typeof AuthenticatedTraceabilityRoute
   AuthenticatedUserGuideRoute: typeof AuthenticatedUserGuideRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedREntityRoute: typeof AuthenticatedREntityRoute
@@ -280,6 +301,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedReportingRoute: AuthenticatedReportingRoute,
+  AuthenticatedTraceabilityRoute: AuthenticatedTraceabilityRoute,
   AuthenticatedUserGuideRoute: AuthenticatedUserGuideRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedREntityRoute: AuthenticatedREntityRoute,

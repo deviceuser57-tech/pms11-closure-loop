@@ -37,6 +37,8 @@ const NAV = [
   { to: "/traceability", label: "Traceability Matrix", icon: Layers },
   { to: "/import", label: "Workbook Import", icon: Upload },
 ] as const;
+
+function Shell() {
   return <RecordSheetProvider><ShellContent /></RecordSheetProvider>;
 }
 
