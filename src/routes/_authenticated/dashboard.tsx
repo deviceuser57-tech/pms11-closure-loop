@@ -1,4 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { StatusBadge } from "@/components/badges";
 import { useRecordSheet } from "@/components/RecordSheet";
 import { blockers, CLOSABLE, closureClass, isExpired, isOverdue, useRecords } from "@/lib/records";
@@ -39,8 +42,27 @@ function Dashboard() {
   const gates = of("gate");
   const ready = gates.length > 0 && gates.every((g) => g.status === "Go");
   
+  const container = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    gsap.from(".maritime-card", {
+      y: 30,
+      opacity: 0,
+      stagger: 0.05,
+      duration: 0.8,
+      ease: "power3.out",
+    });
+    gsap.from("header > div", {
+      y: -20,
+      opacity: 0,
+      stagger: 0.1,
+      duration: 1,
+      ease: "power2.out",
+    });
+  }, { scope: container });
+  
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={container}>
       <header className="flex items-end justify-between">
         <div><p className="label-caps">PMS 11 · IMO 7511826</p><h1 className="font-display text-4xl font-semibold">Command Center</h1></div>
         <div className="text-right"><p className="label-caps">Final readiness</p><StatusBadge value={ready ? "Go" : "Not ready — No-Go"} className="text-sm" /></div>

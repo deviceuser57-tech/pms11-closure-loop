@@ -32,13 +32,11 @@ const NAV = [
   { to: "/r/equipment", label: "Vessel & Equipment", icon: Ship },
   { to: "/reporting", label: "Smart Reporting", icon: BarChart3 },
   { to: "/ai-chat", label: "AI Command Chat", icon: MessageSquare },
-  { to: "/ai-review", label: "AI Evidence Review", icon: FileText },
   { to: "/user-guide", label: "User Guide", icon: BookOpen },
   { to: "/audit", label: "Audit & Reports", icon: History },
+  { to: "/traceability", label: "Traceability Matrix", icon: Layers },
   { to: "/import", label: "Workbook Import", icon: Upload },
 ] as const;
-
-function Shell() {
   return <RecordSheetProvider><ShellContent /></RecordSheetProvider>;
 }
 

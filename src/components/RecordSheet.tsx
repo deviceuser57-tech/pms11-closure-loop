@@ -70,7 +70,7 @@ export function RecordSheetProvider({ children }: { children: ReactNode }) {
     >
       {children}
       <Sheet open={Boolean(id)} onOpenChange={handleOpenChange}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl" onInteractOutside={(e) => {
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl bg-white/60 backdrop-blur-3xl border-l-white/20 dark:bg-black/60 dark:border-l-white/10 shadow-2xl" onInteractOutside={(e) => {
           if (hasUnsavedChanges) e.preventDefault();
         }}>
           {id ? <Detail id={id} /> : null}
