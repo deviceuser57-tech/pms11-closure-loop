@@ -58,7 +58,9 @@ function installChunkLoadRecovery() {
   }
 }
 
-installChunkLoadRecovery();
+if (typeof window !== "undefined") {
+  installChunkLoadRecovery();
+}
 
 function NotFoundComponent() {
   return (
