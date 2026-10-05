@@ -5,6 +5,9 @@ import { useGSAP } from "@gsap/react";
 import { StatusBadge } from "@/components/badges";
 import { useRecordSheet } from "@/components/RecordSheet";
 import { blockers, CLOSABLE, closureClass, isExpired, isOverdue, useRecords } from "@/lib/records";
+import { exportPdf } from "@/lib/export";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   staticData: { sitemap: false },
@@ -77,9 +80,21 @@ function Dashboard() {
   
   return (
     <div className="space-y-6" ref={container}>
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div><p className="label-caps">PMS 11 · IMO 7511826</p><h1 className="font-display text-4xl font-semibold">Command Center</h1></div>
-        <div className="text-right"><p className="label-caps">Final readiness</p><StatusBadge value={ready ? "Go" : "Not ready — No-Go"} className="text-sm" /></div>
+        <div className="flex items-end gap-4 text-right">
+          <Button variant="outline" size="sm" onClick={() => {
+            exportPdf("Daily Readiness Briefing", [
+              { heading: "Critical Open Findings", head: ["ID", "Title", "Owner", "Due"], body: gaps.filter(g => g.criticality === "Critical").map(g => [g.rid, g.title, g.owner || "", g.due_date || ""]) },
+              { heading: "Overdue Actions", head: ["ID", "Title", "Status", "Due"], body: overdue.map(o => [o.rid, o.title, o.status, o.due_date || ""]) },
+              { heading: "Expiring Evidence (Next 7 Days)", head: ["ID", "Title", "Expiry", "Owner"], body: expiring7.map(e => [e.rid, e.title, e.expiry_date || "", e.owner || ""]) },
+              { heading: "Gate Readiness Blockers", head: ["Gate", "Title", "Blocker Reason"], body: gates.filter(g => g.status !== "Go").flatMap(g => blockers(g, get, all).map(b => [g.rid, g.title, b])) }
+            ]);
+          }}>
+            <Download className="w-4 h-4 mr-2" /> Daily Briefing PDF
+          </Button>
+          <div><p className="label-caps">Final readiness</p><StatusBadge value={ready ? "Go" : "Not ready — No-Go"} className="text-sm" /></div>
+        </div>
       </header>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Link to="/r/$entity" params={{ entity: "wps" }}><Kpi label="WPS" value={of("wps").length} sub="Work Packages" tone="text-primary" /></Link>

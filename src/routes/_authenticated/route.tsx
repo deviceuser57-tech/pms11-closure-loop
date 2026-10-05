@@ -35,7 +35,9 @@ const NAV = [
   { to: "/ai-chat", label: "AI Command Chat", icon: MessageSquare },
   { to: "/user-guide", label: "User Guide", icon: BookOpen },
   { to: "/audit", label: "Audit & Reports", icon: History },
+  { to: "/documents", label: "Document Control", icon: FileText },
   { to: "/traceability", label: "Traceability Matrix", icon: Layers },
+  { to: "/simulator", label: "Gate Simulator", icon: Activity },
   { to: "/import", label: "Workbook Import", icon: Upload },
 ] as const;
 

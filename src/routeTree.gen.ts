@@ -16,8 +16,10 @@ import { Route as AuthenticatedAiChatRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAiReviewRouteImport } from './routes/_authenticated/ai-review'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
 import { Route as AuthenticatedReportingRouteImport } from './routes/_authenticated/reporting'
+import { Route as AuthenticatedSimulatorRouteImport } from './routes/_authenticated/simulator'
 import { Route as AuthenticatedTraceabilityRouteImport } from './routes/_authenticated/traceability'
 import { Route as AuthenticatedUserGuideRouteImport } from './routes/_authenticated/user-guide'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
@@ -57,6 +59,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDocumentsRoute = AuthenticatedDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
   id: '/import',
   path: '/import',
@@ -65,6 +72,11 @@ const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
 const AuthenticatedReportingRoute = AuthenticatedReportingRouteImport.update({
   id: '/reporting',
   path: '/reporting',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSimulatorRoute = AuthenticatedSimulatorRouteImport.update({
+  id: '/simulator',
+  path: '/simulator',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTraceabilityRoute =
@@ -96,8 +108,10 @@ export interface FileRoutesByFullPath {
   '/ai-review': typeof AuthenticatedAiReviewRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
   '/import': typeof AuthenticatedImportRoute
   '/reporting': typeof AuthenticatedReportingRoute
+  '/simulator': typeof AuthenticatedSimulatorRoute
   '/traceability': typeof AuthenticatedTraceabilityRoute
   '/user-guide': typeof AuthenticatedUserGuideRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -110,8 +124,10 @@ export interface FileRoutesByTo {
   '/ai-review': typeof AuthenticatedAiReviewRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
   '/import': typeof AuthenticatedImportRoute
   '/reporting': typeof AuthenticatedReportingRoute
+  '/simulator': typeof AuthenticatedSimulatorRoute
   '/traceability': typeof AuthenticatedTraceabilityRoute
   '/user-guide': typeof AuthenticatedUserGuideRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -126,8 +142,10 @@ export interface FileRoutesById {
   '/_authenticated/ai-review': typeof AuthenticatedAiReviewRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/reporting': typeof AuthenticatedReportingRoute
+  '/_authenticated/simulator': typeof AuthenticatedSimulatorRoute
   '/_authenticated/traceability': typeof AuthenticatedTraceabilityRoute
   '/_authenticated/user-guide': typeof AuthenticatedUserGuideRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -142,8 +160,10 @@ export interface FileRouteTypes {
     | '/ai-review'
     | '/audit'
     | '/dashboard'
+    | '/documents'
     | '/import'
     | '/reporting'
+    | '/simulator'
     | '/traceability'
     | '/user-guide'
     | '/admin/users'
@@ -156,8 +176,10 @@ export interface FileRouteTypes {
     | '/ai-review'
     | '/audit'
     | '/dashboard'
+    | '/documents'
     | '/import'
     | '/reporting'
+    | '/simulator'
     | '/traceability'
     | '/user-guide'
     | '/admin/users'
@@ -171,8 +193,10 @@ export interface FileRouteTypes {
     | '/_authenticated/ai-review'
     | '/_authenticated/audit'
     | '/_authenticated/dashboard'
+    | '/_authenticated/documents'
     | '/_authenticated/import'
     | '/_authenticated/reporting'
+    | '/_authenticated/simulator'
     | '/_authenticated/traceability'
     | '/_authenticated/user-guide'
     | '/_authenticated/admin/users'
@@ -236,6 +260,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/documents': {
+      id: '/_authenticated/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AuthenticatedDocumentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/import': {
       id: '/_authenticated/import'
       path: '/import'
@@ -248,6 +279,13 @@ declare module '@tanstack/react-router' {
       path: '/reporting'
       fullPath: '/reporting'
       preLoaderRoute: typeof AuthenticatedReportingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/simulator': {
+      id: '/_authenticated/simulator'
+      path: '/simulator'
+      fullPath: '/simulator'
+      preLoaderRoute: typeof AuthenticatedSimulatorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/traceability': {
@@ -286,8 +324,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAiReviewRoute: typeof AuthenticatedAiReviewRoute
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedReportingRoute: typeof AuthenticatedReportingRoute
+  AuthenticatedSimulatorRoute: typeof AuthenticatedSimulatorRoute
   AuthenticatedTraceabilityRoute: typeof AuthenticatedTraceabilityRoute
   AuthenticatedUserGuideRoute: typeof AuthenticatedUserGuideRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
@@ -299,8 +339,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAiReviewRoute: AuthenticatedAiReviewRoute,
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedReportingRoute: AuthenticatedReportingRoute,
+  AuthenticatedSimulatorRoute: AuthenticatedSimulatorRoute,
   AuthenticatedTraceabilityRoute: AuthenticatedTraceabilityRoute,
   AuthenticatedUserGuideRoute: AuthenticatedUserGuideRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
