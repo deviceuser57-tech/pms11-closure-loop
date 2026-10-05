@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const DEMO_EMAIL = "pms11-demo-admin@temporary.invalid";
+const DEMO_EMAIL = "pms11-demo-admin@example.com";
 
 export const enterDemoMode = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ redirectTo: z.string().url() }).parse(input))
