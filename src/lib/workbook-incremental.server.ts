@@ -1,4 +1,4 @@
-import xlsx from "xlsx";
+import * as xlsx from "xlsx";
 
 export type WorkbookRecord = {
   entity: string;

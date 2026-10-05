@@ -8,7 +8,8 @@ import { useRecords } from "@/lib/records";
 import { askPms11AI } from "@/lib/ai-chat.functions";
 
 export const Route = createFileRoute("/_authenticated/ai-chat")({
-  head: () => ({ meta: [{ title: "PMS-11 AI Command Chat — Closure Loop" }] }),
+  staticData: { sitemap: false },
+  head: () => ({ meta: [{ title: "PMS-11 AI Command Chat — Closure Loop" }, { name: "description", content: "Ask operational questions about PMS 11 records, blockers, required evidence and next actions." }] }),
   component: AIChat,
 });
 

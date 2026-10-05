@@ -92,3 +92,30 @@ end
 $$;
 revoke all on function public.set_record_department(uuid,text) from public, anon;
 grant execute on function public.set_record_department(uuid,text) to authenticated;
+
+
+-- Assign a WPS to a department and cascade that scope to every record
+-- explicitly linked to the WPS in the normalized wps_id or source workbook data.
+create or replace function public.set_wps_department(_wps_rid text, _department text)
+returns integer
+language plpgsql security definer set search_path = public
+as $$
+declare
+  affected integer;
+begin
+  if not public.has_role(auth.uid(),'admin') then
+    raise exception 'Only Admins can assign WPS departments';
+  end if;
+
+  update public.records
+  set department = nullif(trim(_department),'')
+  where rid = _wps_rid
+     or wps_id = _wps_rid
+     or position('"' || _wps_rid || '"' in data::text) > 0;
+
+  get diagnostics affected = row_count;
+  return affected;
+end
+$$;
+revoke all on function public.set_wps_department(text,text) from public, anon;
+grant execute on function public.set_wps_department(text,text) to authenticated;

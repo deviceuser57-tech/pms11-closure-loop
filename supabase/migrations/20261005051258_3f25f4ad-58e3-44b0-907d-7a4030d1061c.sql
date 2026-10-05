@@ -1,0 +1,1 @@
+revoke execute on function public.is_member(uuid) from public, anon;
