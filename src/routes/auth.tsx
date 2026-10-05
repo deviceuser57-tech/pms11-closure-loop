@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Anchor, Loader2 } from "lucide-react";
+import { enterDemoMode } from "@/lib/demo-auth.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ function AuthPage() {
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [demoStarting, setDemoStarting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -47,7 +49,25 @@ function AuthPage() {
       }
     };
 
-    void checkExistingSession();
+    const startTemporaryDemo = async () => {
+      if (import.meta.env.VITE_PMS11_DEMO_MODE === "false") return;
+      setDemoStarting(true);
+      try {
+        const redirectTo = new URL("/dashboard", window.location.origin).toString();
+        const { actionLink } = await enterDemoMode({ data: { redirectTo } });
+        window.location.assign(actionLink);
+      } catch (error) {
+        console.error("[Auth] Demo mode failed:", error);
+        if (active) {
+          setDemoStarting(false);
+          setMessage(error instanceof Error ? error.message : "Temporary demo mode could not start.");
+        }
+      }
+    };
+
+    void checkExistingSession().then(() => {
+      if (active) void startTemporaryDemo();
+    });
 
     return () => {
       active = false;
@@ -145,6 +165,34 @@ function AuthPage() {
           </div>
         </div>
 
+        {import.meta.env.VITE_PMS11_DEMO_MODE !== "false" ? (
+          <div className="space-y-3">
+            <div className="rounded-md border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+              <p className="font-semibold">Temporary Test Mode</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Login and signup are temporarily bypassed. Entering as Demo Admin uses a real Supabase session; database RLS remains enabled.
+              </p>
+            </div>
+            <Button type="button" className="w-full" disabled={demoStarting} onClick={async () => {
+              setDemoStarting(true);
+              setMessage("");
+              try {
+                const redirectTo = new URL("/dashboard", window.location.origin).toString();
+                const { actionLink } = await enterDemoMode({ data: { redirectTo } });
+                window.location.assign(actionLink);
+              } catch (error) {
+                setDemoStarting(false);
+                const text = error instanceof Error ? error.message : "Temporary demo mode could not start.";
+                setMessage(text);
+                toast.error(text);
+              }
+            }}>
+              {demoStarting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {demoStarting ? "Entering Demo Admin…" : "Enter as Demo Admin"}
+            </Button>
+          </div>
+        ) : null}
+
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1">
             <Label htmlFor="auth-email" className="text-xs font-black uppercase tracking-widest text-muted-foreground">
@@ -192,7 +240,7 @@ function AuthPage() {
           </div>
         )}
 
-        <button
+        {import.meta.env.VITE_PMS11_DEMO_MODE === "false" && <button
           type="button"
           className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
           onClick={() => {
@@ -202,7 +250,7 @@ function AuthPage() {
           disabled={busy}
         >
           {mode === "in" ? "No account? Create one" : "Have an account? Sign in"}
-        </button>
+        </button>}
       </div>
     </div>
   );
