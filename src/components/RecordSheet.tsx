@@ -64,9 +64,12 @@ export function RecordSheetProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function FieldLabel({ children }: { children: ReactNode }) {
+function FieldLabel({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
   return (
-    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+    <Label
+      htmlFor={htmlFor}
+      className="text-xs font-black uppercase tracking-widest text-muted-foreground block"
+    >
       {children}
     </Label>
   );
@@ -374,7 +377,7 @@ function Detail({ id }: { id: string }) {
 
       {typeof sourceData["PMS-11 Scope Reconciliation"] === "string" ? (
         <div className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm">
-          <p className="label-caps mb-1 text-primary">PMS-11 scope reconciliation (derived)</p>
+          <h2 className="text-xs font-black uppercase tracking-widest text-primary mb-1">PMS-11 Scope Reconciliation</h2>
           {sourceData["PMS-11 Scope Reconciliation"] as string}
         </div>
       ) : null}
@@ -387,7 +390,7 @@ function Detail({ id }: { id: string }) {
               : "rounded-md border border-success/40 bg-success/5 p-3 text-sm"
           }
         >
-          <p className="label-caps mb-1">Closure check</p>
+          <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Closure Verification</h2>
 
           {closureBlockers.length ? (
             <ul className="list-disc pl-5 text-xs">
@@ -405,13 +408,13 @@ function Detail({ id }: { id: string }) {
 
       <section className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <FieldLabel>Owner *</FieldLabel>
+          <FieldLabel htmlFor="record-owner">Owner *</FieldLabel>
           <Select
             disabled={!canEdit || !editing}
             value={form.owner ?? ""}
             onValueChange={(value) => setForm({ ...form, owner: value })}
           >
-            <SelectTrigger>
+            <SelectTrigger id="record-owner">
               <SelectValue placeholder="Select owner / department" />
             </SelectTrigger>
             <SelectContent className="max-h-72">
@@ -432,8 +435,9 @@ function Detail({ id }: { id: string }) {
         </div>
 
         <div className="space-y-1">
-          <FieldLabel>Due date</FieldLabel>
+          <FieldLabel htmlFor="record-due-date">Due date</FieldLabel>
           <Input
+            id="record-due-date"
             type="date"
             disabled={!canEdit || !editing}
             value={form.due_date ?? ""}
@@ -444,13 +448,13 @@ function Detail({ id }: { id: string }) {
         </div>
 
         <div className="space-y-1">
-          <FieldLabel>Status</FieldLabel>
+          <FieldLabel htmlFor="record-status">Status</FieldLabel>
           <Select
             disabled={!canEdit || !editing}
             value={form.status ?? ""}
             onValueChange={(value) => setForm({ ...form, status: value })}
           >
-            <SelectTrigger>
+            <SelectTrigger id="record-status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -464,13 +468,13 @@ function Detail({ id }: { id: string }) {
         </div>
 
         <div className="space-y-1">
-          <FieldLabel>Criticality</FieldLabel>
+          <FieldLabel htmlFor="record-criticality">Criticality</FieldLabel>
           <Select
             disabled={!canEdit || !editing}
             value={form.criticality ?? ""}
             onValueChange={(value) => setForm({ ...form, criticality: value })}
           >
-            <SelectTrigger>
+            <SelectTrigger id="record-criticality">
               <SelectValue placeholder="Governed value" />
             </SelectTrigger>
             <SelectContent>
@@ -485,7 +489,7 @@ function Detail({ id }: { id: string }) {
 
         {applicabilityValues.length > 0 ? (
           <div className="space-y-1">
-            <FieldLabel>Applicability</FieldLabel>
+            <FieldLabel htmlFor="record-applicability">Applicability</FieldLabel>
             <Select
               disabled={!canEdit || !editing}
               value={form.applicability ?? ""}
@@ -520,8 +524,9 @@ function Detail({ id }: { id: string }) {
             </div>
 
             <div className="space-y-1">
-              <FieldLabel>Document no.</FieldLabel>
+              <FieldLabel htmlFor="record-doc-number">Document no.</FieldLabel>
               <Input
+                id="record-doc-number"
                 disabled={!canEdit || !editing}
                 value={form.doc_number ?? ""}
                 onChange={(event) => setForm({ ...form, doc_number: event.target.value })}
@@ -529,8 +534,9 @@ function Detail({ id }: { id: string }) {
             </div>
 
             <div className="space-y-1">
-              <FieldLabel>Revision</FieldLabel>
+              <FieldLabel htmlFor="record-revision">Revision</FieldLabel>
               <Input
+                id="record-revision"
                 disabled={!canEdit || !editing}
                 value={form.revision ?? ""}
                 onChange={(event) => setForm({ ...form, revision: event.target.value })}
@@ -538,8 +544,9 @@ function Detail({ id }: { id: string }) {
             </div>
 
             <div className="col-span-2 space-y-1">
-              <FieldLabel>Issuer</FieldLabel>
+              <FieldLabel htmlFor="record-issuer">Issuer</FieldLabel>
               <Input
+                id="record-issuer"
                 disabled={!canEdit || !editing}
                 value={form.issuer ?? ""}
                 onChange={(event) => setForm({ ...form, issuer: event.target.value })}
@@ -550,8 +557,9 @@ function Detail({ id }: { id: string }) {
 
         {CLOSABLE.includes(record.entity) ? (
           <div className="col-span-2 space-y-1">
-            <FieldLabel>Recorded execution *</FieldLabel>
+            <FieldLabel htmlFor="record-execution-note">Recorded execution *</FieldLabel>
             <Textarea
+              id="record-execution-note"
               disabled={!canEdit || !editing}
               value={form.execution_note ?? ""}
               onChange={(event) =>
@@ -568,7 +576,7 @@ function Detail({ id }: { id: string }) {
       ) : null}
 
       <section className="space-y-2">
-        <FieldLabel>Linked evidence</FieldLabel>
+        <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">Linked Acceptance & Evidence</h2>
         {linked(evidenceIdsForRecord(record, all), "evidence")}
 
         {canEdit ? (
@@ -599,7 +607,7 @@ function Detail({ id }: { id: string }) {
       </section>
 
       <section className="space-y-2">
-        <FieldLabel>Acceptance criteria</FieldLabel>
+        <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">Acceptance Criteria</h3>
         {linked(record.entity === "wps" ? (wpsLinks?.acceptance ?? []) : record.acceptance_ids, "acceptance")}
       </section>
 
