@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Download, Search } from "lucide-react";
+import { Download, Search, Pencil, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,6 +7,9 @@ import { StatusBadge, SourceBadge } from "@/components/badges";
 import { useRecordSheet } from "@/components/RecordSheet";
 import { closureClass, isOverdue, useRecords, VESSEL, type Rec } from "@/lib/records";
 import { exportExcel } from "@/lib/export";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type Col = { key: string; label: string; render?: (r: Rec) => React.ReactNode; width?: string };
 
@@ -22,7 +25,8 @@ const DEFAULT_COLS: Col[] = [
 const ALL = "__all";
 
 export function RecordTable({ rows, cols = DEFAULT_COLS, title, filters = ["status", "owner", "wps", "due", "closure"] }: { rows: Rec[]; cols?: Col[]; title: string; filters?: string[] }) {
-  const { get } = useRecords();
+  const { get, all, refetch } = useRecords();
+  const { canEdit } = useAuth();
   const sheet = useRecordSheet();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState(ALL);
@@ -47,7 +51,7 @@ export function RecordTable({ rows, cols = DEFAULT_COLS, title, filters = ["stat
     if (due === "overdue" && !isOverdue(r)) return false;
     if (due === "30d" && !(r.due_date && r.due_date >= today && r.due_date <= in30)) return false;
     if (due === "none" && r.due_date) return false;
-    if (closure !== ALL && closureClass(r, get) !== closure) return false;
+    if (closure !== ALL && closureClass(r, get, all) !== closure) return false;
     if (q) {
       const s = q.toLowerCase();
       if (!`${r.rid} ${r.title} ${r.description ?? ""} ${r.owner ?? ""}`.toLowerCase().includes(s)) return false;
@@ -64,6 +68,14 @@ export function RecordTable({ rows, cols = DEFAULT_COLS, title, filters = ["stat
       </SelectContent>
     </Select>
   );
+
+  const remove = async (r: Rec) => {
+    if (!canEdit || !window.confirm(`Delete ${r.rid}? This cannot be undone.`)) return;
+    const { error } = await supabase.from("records").delete().eq("id", r.id);
+    if (error) return toast.error(error.message);
+    toast.success(`${r.rid} deleted`);
+    refetch();
+  };
 
   const doExport = () =>
     exportExcel(`PMS11_${title.replace(/\W+/g, "_")}.xlsx`, [{
@@ -98,7 +110,7 @@ export function RecordTable({ rows, cols = DEFAULT_COLS, title, filters = ["stat
             <thead className="sticky top-0 z-10 bg-card">
               <tr className="border-b border-border">
                 {cols.map((c) => <th key={c.key} className={`label-caps px-3 py-2 text-left ${c.width ?? ""}`}>{c.label}</th>)}
-                <th className="label-caps w-20 px-3 py-2 text-left">Source</th>
+                <th className="label-caps w-20 px-3 py-2 text-left">Source</th>{canEdit&&<th className="label-caps w-28 px-3 py-2 text-left">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -111,10 +123,10 @@ export function RecordTable({ rows, cols = DEFAULT_COLS, title, filters = ["stat
                       ) : c.key === "title" ? <span className="line-clamp-2">{r.title}</span> : <span className="text-xs text-muted-foreground">{String(r[c.key as keyof Rec] ?? "—")}</span>}
                     </td>
                   ))}
-                  <td className="px-3 py-2 align-top"><SourceBadge kind={r.source_kind} /></td>
+                  <td className="px-3 py-2 align-top"><SourceBadge kind={r.source_kind} /></td>{canEdit&&<td className="px-3 py-2 align-top"><div className="flex gap-1"><Button size="icon" variant="ghost" className="h-7 w-7" title="Edit" onClick={(e)=>{e.stopPropagation();sheet.open(r.id);}}><Pencil className="h-3.5 w-3.5"/></Button><Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" title="Delete" onClick={(e)=>{e.stopPropagation();remove(r);}}><Trash2 className="h-3.5 w-3.5"/></Button></div></td>}
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={cols.length + 1} className="px-3 py-10 text-center text-sm text-muted-foreground">No matching items.</td></tr>}
+              {!filtered.length && <tr><td colSpan={cols.length + (canEdit ? 2 : 1)} className="px-3 py-10 text-center text-sm text-muted-foreground">No matching items.</td></tr>}
             </tbody>
           </table>
           {filtered.length > 500 && <p className="p-2 text-center text-xs text-muted-foreground">Showing first 500 — refine filters or export to Excel.</p>}

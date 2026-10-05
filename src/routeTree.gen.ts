@@ -16,6 +16,9 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
 import { Route as AuthenticatedREntityRouteImport } from './routes/_authenticated/r.$entity'
+import { Route as AuthenticatedAIReviewRouteImport } from './routes/_authenticated/ai-review'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
+import { Route as AuthenticatedUserGuideRouteImport } from './routes/_authenticated/user-guide'\nimport { Route as AuthenticatedReportingRouteImport } from './routes/_authenticated/reporting'\nimport { Route as AuthenticatedAIChatRouteImport } from './routes/_authenticated/ai-chat'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -51,6 +54,27 @@ const AuthenticatedREntityRoute = AuthenticatedREntityRouteImport.update({
   path: '/r/$entity',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAIReviewRoute = AuthenticatedAIReviewRouteImport.update({
+  id: '/ai-review',
+  path: '/ai-review',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedUserGuideRoute = AuthenticatedUserGuideRouteImport.update({
+  id: '/user-guide',
+  path: '/user-guide',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReportingRoute = AuthenticatedReportingRouteImport.update({
+  id: '/reporting', path: '/reporting', getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAIChatRoute = AuthenticatedAIChatRouteImport.update({
+  id: '/ai-chat', path: '/ai-chat', getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,6 +83,11 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import': typeof AuthenticatedImportRoute
   '/r/$entity': typeof AuthenticatedREntityRoute
+  '/ai-review': typeof AuthenticatedAIReviewRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/user-guide': typeof AuthenticatedUserGuideRoute
+  '/reporting': typeof AuthenticatedReportingRoute
+  '/ai-chat': typeof AuthenticatedAIChatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,6 +96,11 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import': typeof AuthenticatedImportRoute
   '/r/$entity': typeof AuthenticatedREntityRoute
+  '/ai-review': typeof AuthenticatedAIReviewRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/user-guide': typeof AuthenticatedUserGuideRoute
+  '/reporting': typeof AuthenticatedReportingRoute
+  '/ai-chat': typeof AuthenticatedAIChatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,12 +111,16 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/r/$entity': typeof AuthenticatedREntityRoute
+  '/_authenticated/ai-review': typeof AuthenticatedAIReviewRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/reporting': typeof AuthenticatedReportingRoute
+  '/_authenticated/ai-chat': typeof AuthenticatedAIChatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/audit' | '/dashboard' | '/import' | '/r/$entity'
+  fullPaths: '/' | '/auth' | '/audit' | '/dashboard' | '/import' | '/r/$entity' | '/ai-review' | '/admin/users' | '/user-guide'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/audit' | '/dashboard' | '/import' | '/r/$entity'
+  to: '/' | '/auth' | '/audit' | '/dashboard' | '/import' | '/r/$entity' | '/ai-review' | '/admin/users' | '/user-guide'
   id:
     | '__root__'
     | '/'
@@ -92,6 +130,9 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/import'
     | '/_authenticated/r/$entity'
+    | '/_authenticated/ai-review'
+    | '/_authenticated/admin/users'
+    | '/_authenticated/user-guide'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -151,6 +192,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedREntityRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ai-review': {
+      id: '/_authenticated/ai-review'
+      path: '/ai-review'
+      fullPath: '/ai-review'
+      preLoaderRoute: typeof AuthenticatedAIReviewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -159,6 +214,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedREntityRoute: typeof AuthenticatedREntityRoute
+  AuthenticatedAIReviewRoute: typeof AuthenticatedAIReviewRoute
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+  AuthenticatedUserGuideRoute: typeof AuthenticatedUserGuideRoute
+  AuthenticatedReportingRoute: typeof AuthenticatedReportingRoute
+  AuthenticatedAIChatRoute: typeof AuthenticatedAIChatRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -166,6 +226,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedREntityRoute: AuthenticatedREntityRoute,
+  AuthenticatedAIReviewRoute: AuthenticatedAIReviewRoute,
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+  AuthenticatedUserGuideRoute: AuthenticatedUserGuideRoute,
+  AuthenticatedReportingRoute: AuthenticatedReportingRoute,
+  AuthenticatedAIChatRoute: AuthenticatedAIChatRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
