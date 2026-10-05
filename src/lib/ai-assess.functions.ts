@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const runEvidenceAssessment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ requirementId: z.string().uuid(), filePath: z.string().min(1), notes: z.string().max(4000).optional() }).parse(d))
+  .inputValidator((d) => z.object({ requirementId: z.string().uuid(), filePath: z.string().min(1).optional(), evidenceText: z.string().max(60000).optional(), notes: z.string().max(4000).optional() }).refine((v) => !!v.filePath || !!v.evidenceText, { message: "Provide a filePath or evidenceText." }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
     const [{ data: isRev }, { data: isAdm }] = await Promise.all([
