@@ -111,7 +111,7 @@ begin
   set department = nullif(trim(_department),'')
   where rid = _wps_rid
      or wps_id = _wps_rid
-     or data::text ~ ('"' || regexp_replace(_wps_rid, '([\\.\\+*?\\[\\^\\]$(){}=!<>|:-])', '\\\\1', 'g') || '"');
+     or position('"' || _wps_rid || '"' in data::text) > 0;
 
   get diagnostics affected = row_count;
   return affected;
