@@ -15,7 +15,51 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
 
-function NotFoundComponent() {
+
+function installChunkLoadRecovery() {
+  const key = "pms11-dynamic-import-recovery";
+  const isChunkLoadFailure = (value: unknown) => {
+    const text = value instanceof Error
+      ? value.message
+      : typeof value === "string"
+        ? value
+        : JSON.stringify(value ?? "");
+    return /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError/i.test(text);
+  };
+
+  const recover = (reason: unknown) => {
+    if (!isChunkLoadFailure(reason)) return;
+
+    try {
+      if (sessionStorage.getItem(key) === "1") return;
+      sessionStorage.setItem(key, "1");
+
+      const url = new URL(window.location.href);
+      url.searchParams.set("__pms11_reload", String(Date.now()));
+      window.location.replace(url.toString());
+    } catch {
+      window.location.reload();
+    }
+  };
+
+  window.addEventListener("error", (event) => recover(event.error ?? event.message));
+  window.addEventListener("unhandledrejection", (event) => recover(event.reason));
+
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("__pms11_reload")) {
+      url.searchParams.delete("__pms11_reload");
+      window.history.replaceState(null, "", url.toString());
+    } else {
+      sessionStorage.removeItem(key);
+    }
+  } catch {
+    // Ignore storage/history failures; the application can still run normally.
+  }
+}
+
+installChunkLoadRecovery();
+\nfunction NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
