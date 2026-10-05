@@ -14,7 +14,8 @@ import { ENTITY_LABEL, evidenceState, wpsRelationshipCounts, useRecords } from "
 import { useSetupList } from "@/lib/setup-metadata";
 
 export const Route = createFileRoute("/_authenticated/r/$entity")({
-  head: ({ params }) => ({ meta: [{ title: `${ENTITY_LABEL[params.entity] ?? "Register"} — PMS 11 Closure Loop` }] }),
+  staticData: { sitemap: false },
+  head: ({ params }) => ({ meta: [{ title: `${ENTITY_LABEL[params.entity] ?? "Register"} — PMS 11 Closure Loop` }, { name: "description", content: `${ENTITY_LABEL[params.entity] ?? "Register"} register for vessel PMS 11 — owners, due dates, status, evidence and closure tracking.` }] }),
   component: Register,
 });
 

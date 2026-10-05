@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/auth")({
+  staticData: { sitemap: true },
   head: () => ({
     meta: [
       { title: "Sign in — PMS 11 Closure Loop" },
@@ -139,17 +140,18 @@ function AuthPage() {
             <Anchor className="h-6 w-6" />
           </span>
           <div>
-            <p className="font-display text-2xl font-semibold">PMS 11 Closure Loop</p>
+            <h1 className="font-display text-2xl font-semibold">PMS 11 Closure Loop</h1>
             <p className="label-caps">IMO 7511826 · Readiness & closure</p>
           </div>
         </div>
 
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1">
-            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+            <Label htmlFor="auth-email" className="text-xs font-black uppercase tracking-widest text-muted-foreground">
               Email *
             </Label>
             <Input
+              id="auth-email"
               type="email"
               autoComplete="email"
               required
@@ -160,10 +162,11 @@ function AuthPage() {
           </div>
 
           <div className="space-y-1">
-            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+            <Label htmlFor="auth-password" className="text-xs font-black uppercase tracking-widest text-muted-foreground">
               Password *
             </Label>
             <Input
+              id="auth-password"
               type="password"
               autoComplete={mode === "in" ? "current-password" : "new-password"}
               required

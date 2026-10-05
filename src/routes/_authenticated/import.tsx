@@ -13,7 +13,8 @@ import { useInvalidateRecords } from "@/lib/records";
 import { exportExcel } from "@/lib/export";
 
 export const Route = createFileRoute("/_authenticated/import")({
-  head:()=>({meta:[{title:"Workbook Import — PMS 11 Closure Loop"}]}),
+  staticData:{sitemap:false},
+  head:()=>({meta:[{title:"Workbook Import — PMS 11 Closure Loop"},{name:"description",content:"Guided import mapping the PMS 11 Excel workbook into the tracker, with row-level validation and rejected-row download."}]}),
   component:ImportPage,
 });
 

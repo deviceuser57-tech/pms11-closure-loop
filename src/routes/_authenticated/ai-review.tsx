@@ -11,7 +11,8 @@ import { useRecords, type Rec } from "@/lib/records";
 import { runEvidenceAssessment } from "@/lib/ai-assess.functions";
 
 export const Route = createFileRoute("/_authenticated/ai-review")({
-  head: () => ({ meta: [{ title: "AI Evidence Review — PMS 11 Closure Loop" }] }),
+  staticData: { sitemap: false },
+  head: () => ({ meta: [{ title: "AI Evidence Review — PMS 11 Closure Loop" }, { name: "description", content: "AI-assisted assessment of uploaded evidence against PMS 11 acceptance criteria, identifying missing proof." }] }),
   component: AIReview,
 });
 

@@ -8,6 +8,7 @@ import { useRecords } from "@/lib/records";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated")({
+  staticData: { sitemap: "exclude-subtree" },
   ssr: false,
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();

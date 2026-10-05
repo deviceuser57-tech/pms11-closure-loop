@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { BookOpen, CheckCircle2, ShieldCheck, Workflow, Layers3 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/user-guide")({
-  head: () => ({ meta: [{ title: "User Guide — PMS 11 Closure Loop" }] }),
+  staticData: { sitemap: false },
+  head: () => ({ meta: [{ title: "User Guide — PMS 11 Closure Loop" }, { name: "description", content: "Bilingual guide to PMS 11 closure loop concepts: work packages, rules, evidence, acceptance and gates." }] }),
   component: UserGuide,
 });
 
