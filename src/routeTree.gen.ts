@@ -12,13 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAiChatRouteImport } from './routes/_authenticated/ai-chat'
+import { Route as AuthenticatedAiReviewRouteImport } from './routes/_authenticated/ai-review'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
-import { Route as AuthenticatedREntityRouteImport } from './routes/_authenticated/r.$entity'
-import { Route as AuthenticatedAIReviewRouteImport } from './routes/_authenticated/ai-review'
+import { Route as AuthenticatedReportingRouteImport } from './routes/_authenticated/reporting'
+import { Route as AuthenticatedUserGuideRouteImport } from './routes/_authenticated/user-guide'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
-import { Route as AuthenticatedUserGuideRouteImport } from './routes/_authenticated/user-guide'\nimport { Route as AuthenticatedReportingRouteImport } from './routes/_authenticated/reporting'\nimport { Route as AuthenticatedAIChatRouteImport } from './routes/_authenticated/ai-chat'
+import { Route as AuthenticatedREntityRouteImport } from './routes/_authenticated/r.$entity'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -33,6 +35,16 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAiChatRoute = AuthenticatedAiChatRouteImport.update({
+  id: '/ai-chat',
+  path: '/ai-chat',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAiReviewRoute = AuthenticatedAiReviewRouteImport.update({
+  id: '/ai-review',
+  path: '/ai-review',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
   id: '/audit',
@@ -49,14 +61,9 @@ const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
   path: '/import',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedREntityRoute = AuthenticatedREntityRouteImport.update({
-  id: '/r/$entity',
-  path: '/r/$entity',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAIReviewRoute = AuthenticatedAIReviewRouteImport.update({
-  id: '/ai-review',
-  path: '/ai-review',
+const AuthenticatedReportingRoute = AuthenticatedReportingRouteImport.update({
+  id: '/reporting',
+  path: '/reporting',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedUserGuideRoute = AuthenticatedUserGuideRouteImport.update({
@@ -69,70 +76,94 @@ const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedReportingRoute = AuthenticatedReportingRouteImport.update({
-  id: '/reporting', path: '/reporting', getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAIChatRoute = AuthenticatedAIChatRouteImport.update({
-  id: '/ai-chat', path: '/ai-chat', getParentRoute: () => AuthenticatedRouteRoute,
+const AuthenticatedREntityRoute = AuthenticatedREntityRouteImport.update({
+  id: '/r/$entity',
+  path: '/r/$entity',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/ai-chat': typeof AuthenticatedAiChatRoute
+  '/ai-review': typeof AuthenticatedAiReviewRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import': typeof AuthenticatedImportRoute
-  '/r/$entity': typeof AuthenticatedREntityRoute
-  '/ai-review': typeof AuthenticatedAIReviewRoute
-  '/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/user-guide': typeof AuthenticatedUserGuideRoute
   '/reporting': typeof AuthenticatedReportingRoute
-  '/ai-chat': typeof AuthenticatedAIChatRoute
+  '/user-guide': typeof AuthenticatedUserGuideRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/r/$entity': typeof AuthenticatedREntityRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/ai-chat': typeof AuthenticatedAiChatRoute
+  '/ai-review': typeof AuthenticatedAiReviewRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import': typeof AuthenticatedImportRoute
-  '/r/$entity': typeof AuthenticatedREntityRoute
-  '/ai-review': typeof AuthenticatedAIReviewRoute
-  '/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/user-guide': typeof AuthenticatedUserGuideRoute
   '/reporting': typeof AuthenticatedReportingRoute
-  '/ai-chat': typeof AuthenticatedAIChatRoute
+  '/user-guide': typeof AuthenticatedUserGuideRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/r/$entity': typeof AuthenticatedREntityRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/ai-chat': typeof AuthenticatedAiChatRoute
+  '/_authenticated/ai-review': typeof AuthenticatedAiReviewRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
-  '/_authenticated/r/$entity': typeof AuthenticatedREntityRoute
-  '/_authenticated/ai-review': typeof AuthenticatedAIReviewRoute
-  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/reporting': typeof AuthenticatedReportingRoute
-  '/_authenticated/ai-chat': typeof AuthenticatedAIChatRoute
+  '/_authenticated/user-guide': typeof AuthenticatedUserGuideRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/r/$entity': typeof AuthenticatedREntityRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/audit' | '/dashboard' | '/import' | '/r/$entity' | '/ai-review' | '/admin/users' | '/user-guide'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/ai-chat'
+    | '/ai-review'
+    | '/audit'
+    | '/dashboard'
+    | '/import'
+    | '/reporting'
+    | '/user-guide'
+    | '/admin/users'
+    | '/r/$entity'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/audit' | '/dashboard' | '/import' | '/r/$entity' | '/ai-review' | '/admin/users' | '/user-guide'
+  to:
+    | '/'
+    | '/auth'
+    | '/ai-chat'
+    | '/ai-review'
+    | '/audit'
+    | '/dashboard'
+    | '/import'
+    | '/reporting'
+    | '/user-guide'
+    | '/admin/users'
+    | '/r/$entity'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/ai-chat'
+    | '/_authenticated/ai-review'
     | '/_authenticated/audit'
     | '/_authenticated/dashboard'
     | '/_authenticated/import'
-    | '/_authenticated/r/$entity'
-    | '/_authenticated/ai-review'
-    | '/_authenticated/admin/users'
+    | '/_authenticated/reporting'
     | '/_authenticated/user-guide'
+    | '/_authenticated/admin/users'
+    | '/_authenticated/r/$entity'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -164,6 +195,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/ai-chat': {
+      id: '/_authenticated/ai-chat'
+      path: '/ai-chat'
+      fullPath: '/ai-chat'
+      preLoaderRoute: typeof AuthenticatedAiChatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ai-review': {
+      id: '/_authenticated/ai-review'
+      path: '/ai-review'
+      fullPath: '/ai-review'
+      preLoaderRoute: typeof AuthenticatedAiReviewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/audit': {
       id: '/_authenticated/audit'
       path: '/audit'
@@ -185,18 +230,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedImportRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/r/$entity': {
-      id: '/_authenticated/r/$entity'
-      path: '/r/$entity'
-      fullPath: '/r/$entity'
-      preLoaderRoute: typeof AuthenticatedREntityRouteImport
+    '/_authenticated/reporting': {
+      id: '/_authenticated/reporting'
+      path: '/reporting'
+      fullPath: '/reporting'
+      preLoaderRoute: typeof AuthenticatedReportingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/ai-review': {
-      id: '/_authenticated/ai-review'
-      path: '/ai-review'
-      fullPath: '/ai-review'
-      preLoaderRoute: typeof AuthenticatedAIReviewRouteImport
+    '/_authenticated/user-guide': {
+      id: '/_authenticated/user-guide'
+      path: '/user-guide'
+      fullPath: '/user-guide'
+      preLoaderRoute: typeof AuthenticatedUserGuideRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/users': {
@@ -206,31 +251,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/r/$entity': {
+      id: '/_authenticated/r/$entity'
+      path: '/r/$entity'
+      fullPath: '/r/$entity'
+      preLoaderRoute: typeof AuthenticatedREntityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAiChatRoute: typeof AuthenticatedAiChatRoute
+  AuthenticatedAiReviewRoute: typeof AuthenticatedAiReviewRoute
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
-  AuthenticatedREntityRoute: typeof AuthenticatedREntityRoute
-  AuthenticatedAIReviewRoute: typeof AuthenticatedAIReviewRoute
-  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
-  AuthenticatedUserGuideRoute: typeof AuthenticatedUserGuideRoute
   AuthenticatedReportingRoute: typeof AuthenticatedReportingRoute
-  AuthenticatedAIChatRoute: typeof AuthenticatedAIChatRoute
+  AuthenticatedUserGuideRoute: typeof AuthenticatedUserGuideRoute
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+  AuthenticatedREntityRoute: typeof AuthenticatedREntityRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAiChatRoute: AuthenticatedAiChatRoute,
+  AuthenticatedAiReviewRoute: AuthenticatedAiReviewRoute,
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
-  AuthenticatedREntityRoute: AuthenticatedREntityRoute,
-  AuthenticatedAIReviewRoute: AuthenticatedAIReviewRoute,
-  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
-  AuthenticatedUserGuideRoute: AuthenticatedUserGuideRoute,
   AuthenticatedReportingRoute: AuthenticatedReportingRoute,
-  AuthenticatedAIChatRoute: AuthenticatedAIChatRoute,
+  AuthenticatedUserGuideRoute: AuthenticatedUserGuideRoute,
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+  AuthenticatedREntityRoute: AuthenticatedREntityRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
