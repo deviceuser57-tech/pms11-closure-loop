@@ -62,7 +62,7 @@ function ShellContent() {
 
   const guideKey = (() => {
     const path = window.location.pathname;
-    const match = path.match(/\\/r\\/([^/]+)/);
+    const match = path.match(/\/r\/([^/]+)/);
     if (match) return match[1];
     if (path.includes("/admin/")) return "department";
     if (path.includes("/ai-review")) return "evidence";

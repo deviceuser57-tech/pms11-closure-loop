@@ -19,7 +19,8 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     if (error) throw error;
 
     const byKey = new Map((existing ?? []).map((r) => [r.entity + ":" + r.rid, r]));
-    const added: unknown[] = [], changed: unknown[] = [], unchanged: unknown[] = [], conflicts: unknown[] = [];
+    type DiffRow = { entity: string; rid: string; title?: string; fields?: string[] };
+    const added: DiffRow[] = [], changed: DiffRow[] = [], unchanged: DiffRow[] = [], conflicts: DiffRow[] = [];
 
     for (const r of incoming) {
       const old = byKey.get(r.entity + ":" + r.rid);

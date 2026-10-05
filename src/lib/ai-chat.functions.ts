@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Tables } from "@/integrations/supabase/types";
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText } from "ai";
 
@@ -27,10 +28,13 @@ export const askPms11AI = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => input.parse(d))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
+    // `department` exists in the database but not yet in the generated table types.
+    type AiRec = Tables<"records"> & { department?: string | null };
+    const { data: rawRows, error } = await context.supabase
       .from("records")
       .select("id,entity,rid,title,description,wps_id,gate_id,parent_id,status,owner,department,due_date,criticality,review_status,evidence_ids,acceptance_ids,execution_note")
       .limit(5000);
+    const rows = (rawRows ?? []) as unknown as AiRec[];
 
     if (error) {
       console.error("[PMS-11 AI] records query failed:", error);

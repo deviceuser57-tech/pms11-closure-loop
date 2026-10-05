@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import type { Tables } from "@/integrations/supabase/types";
 import { wpsRelationshipCounts, useRecords } from "@/lib/records";
 
 const ROLES=["admin","reviewer","contributor","viewer"] as const;
@@ -19,7 +20,9 @@ export const Route=createFileRoute("/_authenticated/admin/users")({head:()=>({me
 
 function UsersAdmin(){
   const {isAdmin,loading}=useAuth();const records=useRecords();
-  const q=useQuery({queryKey:["admin-users"],enabled:isAdmin,queryFn:async()=>{const [{data:profiles,error:pe},{data:roles,error:re}]=await Promise.all([supabase.from("profiles").select("*").order("email"),supabase.from("user_roles").select("*")]);if(pe)throw pe;if(re)throw re;return(profiles??[]).map(p=>({...p,roles:(roles??[]).filter(r=>r.user_id===p.id).map(r=>r.role as Role)}));}});
+  const q=useQuery({queryKey:["admin-users"],enabled:isAdmin,queryFn:async()=>{const [{data:profiles,error:pe},{data:roles,error:re}]=await Promise.all([supabase.from("profiles").select("*").order("email"),supabase.from("user_roles").select("*")]);if(pe)throw pe;if(re)throw re;// `department` exists in the database but not yet in the generated table types.
+  type AdminProfile=Tables<"profiles"> & { department?: string | null };
+  return((profiles??[]) as unknown as AdminProfile[]).map(p=>({...p,roles:(roles??[]).filter(r=>r.user_id===p.id).map(r=>r.role as Role)}));}});
   const [saving,setSaving]=useState<string|null>(null);
   const [wpsDepartment,setWpsDraft]=useState<Record<string,string>>({});
   if(loading)return <p className="text-sm text-muted-foreground">Checking permissions…</p>;
