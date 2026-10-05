@@ -4,7 +4,8 @@ import { useRecordSheet } from "@/components/RecordSheet";
 import { CLOSABLE, closureClass, isExpired, isOverdue, useRecords } from "@/lib/records";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Command Center — PMS 11 Closure Loop" }] }),
+  staticData: { sitemap: false },
+  head: () => ({ meta: [{ title: "Command Center — PMS 11 Closure Loop" }, { name: "description", content: "Live readiness KPIs, gate status, and open, blocked and completed closure items for vessel PMS 11." }] }),
   component: Dashboard,
 });
 

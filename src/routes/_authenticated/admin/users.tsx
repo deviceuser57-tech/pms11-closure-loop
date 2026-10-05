@@ -16,7 +16,7 @@ type Role=typeof ROLES[number];
 const ADMIN_REGISTERS=[["rule","Rules"],["wps","Work Packages"],["activity","Activities"],["task","Tasks"],["gap","Findings & CAPA"],["deliverable","Deliverables"],["evidence","Evidence"],["acceptance","Acceptance"],["gate","Gates"],["responsibility","Responsibilities"],["risk","Risks"],["change","Changes"],["equipment","Equipment"]] as const;
 const WPS_COUNT_COLUMNS=[["rule","Rules"],["evidence","Evidence"],["activity","Activities"],["deliverable","Deliverables"],["task","Tasks"],["gap","Gaps"],["acceptance","Acceptance"]] as const;
 
-export const Route=createFileRoute("/_authenticated/admin/users")({head:()=>({meta:[{title:"Admin Console — PMS 11 Closure Loop"}]}),component:UsersAdmin});
+export const Route=createFileRoute("/_authenticated/admin/users")({staticData:{sitemap:false},head:()=>({meta:[{title:"Admin Console — PMS 11 Closure Loop"},{name:"description",content:"Manage user roles and departments for the PMS 11 closure tracker."}]}),component:UsersAdmin});
 
 function UsersAdmin(){
   const {isAdmin,loading}=useAuth();const records=useRecords();

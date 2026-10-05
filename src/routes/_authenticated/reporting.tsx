@@ -7,7 +7,8 @@ import { useRecords, wpsRelationshipCounts } from "@/lib/records";
 import { exportExcel, exportPdf } from "@/lib/export";
 
 export const Route = createFileRoute("/_authenticated/reporting")({
-  head: () => ({ meta:[{title:"Smart Reporting — PMS 11 Closure Loop"}] }),
+  staticData: { sitemap:false },
+  head: () => ({ meta:[{title:"Smart Reporting — PMS 11 Closure Loop"},{name:"description",content:"Filterable smart reports across WPS, entity, status, criticality, department and owner for the PMS 11 record set."}] }),
   component: SmartReporting,
 });
 

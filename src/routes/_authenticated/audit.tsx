@@ -6,7 +6,8 @@ import { closureClass, isExpired, isOverdue, useRecords } from "@/lib/records";
 import { exportExcel, exportPdf } from "@/lib/export";
 
 export const Route = createFileRoute("/_authenticated/audit")({
-  head: () => ({ meta: [{ title: "Audit & Reports — PMS 11 Closure Loop" }] }),
+  staticData: { sitemap: false },
+  head: () => ({ meta: [{ title: "Audit & Reports — PMS 11 Closure Loop" }, { name: "description", content: "Change history, rule-to-evidence traceability and Excel/PDF readiness reports for the PMS 11 closure loop." }] }),
   component: AuditPage,
 });
 
