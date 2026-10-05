@@ -35,28 +35,44 @@ import { runEvidenceAssessment } from "@/lib/ai-assess.functions";
 type RecordSheetContext = {
   open: (id: string) => void;
   close: () => void;
+  setHasUnsavedChanges: (val: boolean) => void;
 };
 
 const Ctx = createContext<RecordSheetContext>({
   open: () => {},
   close: () => {},
+  setHasUnsavedChanges: () => {},
 });
 
 export const useRecordSheet = () => useContext(Ctx);
 
 export function RecordSheetProvider({ children }: { children: ReactNode }) {
   const [id, setId] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      if (hasUnsavedChanges && !window.confirm("You have unsaved edits. Discard them?")) {
+        return;
+      }
+      setId(null);
+      setHasUnsavedChanges(false);
+    }
+  };
 
   return (
     <Ctx.Provider
       value={{
         open: setId,
-        close: () => setId(null),
+        close: () => handleOpenChange(false),
+        setHasUnsavedChanges,
       }}
     >
       {children}
-      <Sheet open={Boolean(id)} onOpenChange={(open) => !open && setId(null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+      <Sheet open={Boolean(id)} onOpenChange={handleOpenChange}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl" onInteractOutside={(e) => {
+          if (hasUnsavedChanges) e.preventDefault();
+        }}>
           {id ? <Detail id={id} /> : null}
         </SheetContent>
       </Sheet>
@@ -94,6 +110,7 @@ function Detail({ id }: { id: string }) {
     if (!record) return;
 
     setEditing(false);
+    sheet.setHasUnsavedChanges(false);
     setForm({
       owner: record.owner,
       due_date: record.due_date,
@@ -108,6 +125,11 @@ function Detail({ id }: { id: string }) {
       applicability: record.applicability,
     });
   }, [record?.id, record?.updated_at]);
+
+  const updateForm = (patch: Partial<Rec>) => {
+    setForm((prev) => ({ ...prev, ...patch }));
+    sheet.setHasUnsavedChanges(true);
+  };
 
   const reviews = useQuery({
     queryKey: ["reviews", id],
@@ -187,6 +209,7 @@ function Detail({ id }: { id: string }) {
 
     toast.success("Saved");
     setEditing(false);
+    sheet.setHasUnsavedChanges(false);
     invalidate();
   };
 
@@ -207,6 +230,13 @@ function Detail({ id }: { id: string }) {
   };
 
   const submitReview = async (decision: string) => {
+    if (decision.includes("Reject") || decision === "No-Go") {
+      if (!comment.trim()) {
+        toast.error("A comment is required when rejecting or issuing a No-Go.");
+        return;
+      }
+    }
+
     const kind = record.entity === "gate" ? "gate" : "review";
 
     const { error } = await supabase.from("reviews").insert({
@@ -371,6 +401,13 @@ function Detail({ id }: { id: string }) {
             <StatusBadge value={`Review: ${record.review_status}`} />
             {record.wps_id ? <span className="rid">{record.wps_id}</span> : null}
             {record.gate_id ? <span className="rid">{record.gate_id}</span> : null}
+            {record.entity === "gate" ? (
+              <StatusBadge
+                value={`Quorum: ${
+                  [...new Set((reviews.data ?? []).filter((r) => r.decision === "Go").map((r) => r.reviewer_name))].length
+                } / ${(record as any).quorum_required ?? 1}`}
+              />
+            ) : null}
           </div>
         </div>
       </SheetHeader>
@@ -414,7 +451,7 @@ function Detail({ id }: { id: string }) {
           <Select
             disabled={!canEdit || !editing}
             value={form.owner ?? ""}
-            onValueChange={(value) => setForm({ ...form, owner: value })}
+            onValueChange={(value) => updateForm({ owner: value })}
           >
             <SelectTrigger id="record-owner">
               <SelectValue placeholder="Select owner / department" />
@@ -444,7 +481,7 @@ function Detail({ id }: { id: string }) {
             disabled={!canEdit || !editing}
             value={form.due_date ?? ""}
             onChange={(event) =>
-              setForm({ ...form, due_date: event.target.value || null })
+              updateForm({ due_date: event.target.value || null })
             }
           />
         </div>
@@ -454,7 +491,7 @@ function Detail({ id }: { id: string }) {
           <Select
             disabled={!canEdit || !editing}
             value={form.status ?? ""}
-            onValueChange={(value) => setForm({ ...form, status: value })}
+            onValueChange={(value) => updateForm({ status: value })}
           >
             <SelectTrigger id="record-status">
               <SelectValue />
@@ -474,7 +511,7 @@ function Detail({ id }: { id: string }) {
           <Select
             disabled={!canEdit || !editing}
             value={form.criticality ?? ""}
-            onValueChange={(value) => setForm({ ...form, criticality: value })}
+            onValueChange={(value) => updateForm({ criticality: value })}
           >
             <SelectTrigger id="record-criticality">
               <SelectValue placeholder="Governed value" />
@@ -495,7 +532,7 @@ function Detail({ id }: { id: string }) {
             <Select
               disabled={!canEdit || !editing}
               value={form.applicability ?? ""}
-              onValueChange={(value) => setForm({ ...form, applicability: value })}
+              onValueChange={(value) => updateForm({ applicability: value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Governed value" />
@@ -520,7 +557,7 @@ function Detail({ id }: { id: string }) {
                 disabled={!canEdit || !editing}
                 value={form.expiry_date ?? ""}
                 onChange={(event) =>
-                  setForm({ ...form, expiry_date: event.target.value || null })
+                  updateForm({ expiry_date: event.target.value || null })
                 }
               />
             </div>
@@ -531,7 +568,7 @@ function Detail({ id }: { id: string }) {
                 id="record-doc-number"
                 disabled={!canEdit || !editing}
                 value={form.doc_number ?? ""}
-                onChange={(event) => setForm({ ...form, doc_number: event.target.value })}
+                onChange={(event) => updateForm({ doc_number: event.target.value })}
               />
             </div>
 
@@ -541,7 +578,7 @@ function Detail({ id }: { id: string }) {
                 id="record-revision"
                 disabled={!canEdit || !editing}
                 value={form.revision ?? ""}
-                onChange={(event) => setForm({ ...form, revision: event.target.value })}
+                onChange={(event) => updateForm({ revision: event.target.value })}
               />
             </div>
 
@@ -551,7 +588,7 @@ function Detail({ id }: { id: string }) {
                 id="record-issuer"
                 disabled={!canEdit || !editing}
                 value={form.issuer ?? ""}
-                onChange={(event) => setForm({ ...form, issuer: event.target.value })}
+                onChange={(event) => updateForm({ issuer: event.target.value })}
               />
             </div>
           </>
@@ -565,7 +602,7 @@ function Detail({ id }: { id: string }) {
               disabled={!canEdit || !editing}
               value={form.execution_note ?? ""}
               onChange={(event) =>
-                setForm({ ...form, execution_note: event.target.value })
+                updateForm({ execution_note: event.target.value })
               }
               placeholder="What was done, when, by whom"
             />
@@ -734,7 +771,7 @@ function Detail({ id }: { id: string }) {
         {canReview ? (
           <div className="space-y-2">
             <Textarea
-              placeholder="Comment"
+              placeholder="Comment (Required for Rejection or No-Go)"
               value={comment}
               onChange={(event) => setComment(event.target.value)}
             />
