@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { BookOpen, CheckCircle2, ShieldCheck, Workflow, Layers3 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/user-guide")({
@@ -31,8 +32,20 @@ const elements = [
 ];
 
 function UserGuide() {
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  useEffect(() => {
+    const key = window.location.hash.replace("#", "");
+    if (!key) return;
+    setActiveKey(key);
+    window.setTimeout(() => document.getElementById(key)?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+    const onHash = () => setActiveKey(window.location.hash.replace("#", "") || null);
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  const backTo = (key: string) => ({ wps: "/r/wps", rule: "/r/rule", activity: "/r/activity", task: "/r/task", deliverable: "/r/deliverable", evidence: "/r/evidence", acceptance: "/r/acceptance", gap: "/r/gap", gate: "/r/gate", responsibility: "/r/responsibility", risk: "/r/risk", change: "/r/change", equipment: "/r/equipment" } as Record<string,string>)[key] ?? "/dashboard";
+  const elementKey = (name: string) => name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
   return <div className="mx-auto max-w-6xl space-y-6">
-    <header><p className="label-caps">PMS 11 · User Guide</p><h1 className="font-display text-4xl font-semibold">دليل استخدام PMS-11 Closure Loop</h1><p className="mt-2 text-sm text-muted-foreground">تعريف كل عنصر رئيسي في النظام، وظيفته، وعلاقته بحلقة الإغلاق.</p></header>
+    <header><p className="label-caps">PMS 11 · User Guide</p><h1 className="font-display text-4xl font-semibold">دليل استخدام PMS-11 Closure Loop</h1><p className="mt-2 text-sm text-muted-foreground">تعريف كل عنصر رئيسي في النظام، وظيفته، وعلاقته بحلقة الإغلاق.</p><p className="mt-2 text-xs text-muted-foreground">اضغط على اسم أي عنصر للعودة مباشرة إلى صفحته. وعند فتح الدليل من زر Help سيتم تمييز العنصر المطلوب تلقائياً.</p></header>
     <div className="grid gap-4 md:grid-cols-3">
       <div className="maritime-card p-5"><BookOpen className="mb-3 h-5 w-5 text-primary"/><h2 className="font-semibold">الإضافة</h2><p className="mt-2 text-sm text-muted-foreground">أنشئ السجل من الـ Register المناسب واستخدم القيم المحكومة للإدارة والمالك والحالة والحرجية.</p></div>
       <div className="maritime-card p-5"><Workflow className="mb-3 h-5 w-5 text-primary"/><h2 className="font-semibold">التنفيذ والتتبع</h2><p className="mt-2 text-sm text-muted-foreground">اربط Activity وTask وEvidence وAcceptance بالعلاقات الفعلية من المصدر، ولا تنشئ علاقة غير مدعومة.</p></div>
@@ -40,7 +53,7 @@ function UserGuide() {
     </div>
     <section className="maritime-card p-6 space-y-4">
       <div className="flex items-center gap-2"><Layers3 className="h-5 w-5 text-primary"/><h2 className="font-display text-2xl">تعريف عناصر النظام</h2></div>
-      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="p-3">العنصر</th><th className="p-3">التعريف والوظيفة</th><th className="p-3">مثال / ملاحظة</th></tr></thead><tbody>{elements.map(([name,def,example]) => <tr key={name} className="border-b align-top"><td className="p-3 font-semibold whitespace-nowrap">{name}</td><td className="p-3 text-muted-foreground">{def}</td><td className="p-3 text-muted-foreground">{example}</td></tr>)}</tbody></table></div>
+      <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="p-3">العنصر</th><th className="p-3">التعريف والوظيفة</th><th className="p-3">مثال / ملاحظة</th></tr></thead><tbody>{elements.map(([name,def,example]) => { const key = elementKey(name); const href = backTo(key); const active = activeKey === key; return <tr key={name} id={key} className={`border-b align-top transition-all ${active ? "bg-primary/10 ring-2 ring-primary/50 shadow-md" : ""}`}><td className="p-3 font-semibold whitespace-nowrap"><a href={href} className="text-primary underline decoration-dotted underline-offset-4" title="العودة إلى الصفحة الخاصة بهذا العنصر">{name}</a></td><td className={`p-3 text-muted-foreground ${active ? "font-medium text-foreground" : ""}`}>{def}</td><td className="p-3 text-muted-foreground">{example}</td></tr>; })}</tbody></table></div>
     </section>
     <section className="maritime-card p-6 space-y-4"><h2 className="font-display text-2xl">سير العمل القياسي</h2><ol className="list-decimal space-y-2 pl-5 text-sm"><li>ابدأ من WPS أو Rule أو Gap أو Gate حسب نطاق العمل.</li><li>حدد Activity ثم Tasks التي تنفذ النشاط، إذا كانت موجودة في المصدر.</li><li>سجل التنفيذ الفعلي واربط Evidence المناسب.</li><li>راجع الدليل مقابل Acceptance Criteria.</li><li>إذا وجدت نقصاً، افتح أو حدّث Gap/CAPA ولا تعتبر الحالة Closed.</li><li>نفذ Closure Check قبل الإغلاق وتأكد من عدم وجود No-Go مؤثر.</li></ol></section>
     <section className="maritime-card p-6 space-y-3"><h2 className="font-display text-2xl">الإدارة والصلاحيات</h2><p className="text-sm text-muted-foreground">الـ Admin يرى جميع الإدارات. المستخدم غير الإداري يرى السجلات ضمن Department المخصص له. تغييرات الأدوار والصلاحيات الإدارية محكومة ولا تُمنح من واجهة المستخدم العادية.</p><Link to="/admin/users" className="inline-flex items-center gap-2 text-primary underline"><ShieldCheck className="h-4 w-4"/>فتح لوحة الإدارة</Link></section>
