@@ -512,7 +512,7 @@ function Detail({ id }: { id: string }) {
         {record.entity === "evidence" ? (
           <>
             <div className="space-y-1">
-              <FieldLabel>Expiry</FieldLabel>
+              <FieldLabel htmlFor="record-expiry">Expiry</FieldLabel>
               <Input
                 type="date"
                 disabled={!canEdit || !editing}
