@@ -406,7 +406,9 @@ function Detail({ id }: { id: string }) {
         </div>
       ) : null}
 
-      <section className="grid grid-cols-2 gap-4">
+      <section className="space-y-3">
+        <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">Governance & Status</h2>
+        <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
           <FieldLabel htmlFor="record-owner">Owner *</FieldLabel>
           <Select
@@ -574,6 +576,8 @@ function Detail({ id }: { id: string }) {
       {canEdit && editing ? (
         <Button onClick={() => save(form)}>Save changes</Button>
       ) : null}
+      </div>
+      </section>
 
       <section className="space-y-2">
         <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">Linked Acceptance & Evidence</h2>
@@ -726,9 +730,7 @@ function Detail({ id }: { id: string }) {
       </section>
 
       <section className="space-y-2">
-        <FieldLabel>
-          {record.entity === "gate" ? "Go / No-Go decisions" : "Review history"}
-        </FieldLabel>
+        <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">Review & Decision History</h2>
 
         {canReview ? (
           <div className="space-y-2">
