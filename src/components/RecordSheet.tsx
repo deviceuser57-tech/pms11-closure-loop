@@ -720,27 +720,47 @@ function Detail({ id }: { id: string }) {
           ) : null}
         </div>
 
-        {(files.data ?? []).map((file) => (
-          <button
-            key={file.id}
-            type="button"
-            onClick={() => void openFile(file.path)}
-            className="block text-left text-xs text-primary underline"
-          >
-            {file.filename}
-          </button>
-        ))}
+        <div
+          className="rounded-md border-2 border-dashed border-primary/20 bg-primary/5 p-4 text-center transition-colors hover:border-primary/50"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const file = e.dataTransfer.files?.[0];
+            if (file && canEdit) void upload(file);
+          }}
+        >
+          <p className="mb-2 text-xs text-muted-foreground">
+            {canEdit ? "Drag and drop a file here, or browse" : "Attached Files"}
+          </p>
 
-        {canEdit ? (
-          <Input
-            type="file"
-            className="h-9 text-xs"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void upload(file);
-            }}
-          />
-        ) : null}
+          <div className="mb-4 space-y-1">
+            {(files.data ?? []).map((file) => (
+              <button
+                key={file.id}
+                type="button"
+                onClick={() => void openFile(file.path)}
+                className="block w-full text-center text-xs font-semibold text-primary underline"
+              >
+                {file.filename}
+              </button>
+            ))}
+          </div>
+
+          {canEdit ? (
+            <Input
+              type="file"
+              className="mx-auto max-w-[250px] h-9 text-xs cursor-pointer"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void upload(file);
+              }}
+            />
+          ) : null}
+        </div>
 
         {assessment ? (
           <div className="space-y-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-xs">

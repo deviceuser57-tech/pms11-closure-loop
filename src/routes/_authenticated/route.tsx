@@ -31,6 +31,7 @@ const NAV = [
   { to: "/r/change", label: "Changes", icon: History },
   { to: "/r/equipment", label: "Vessel & Equipment", icon: Ship },
   { to: "/reporting", label: "Smart Reporting", icon: BarChart3 },
+  { to: "/ai-review", label: "AI Evidence Review", icon: FileText },
   { to: "/ai-chat", label: "AI Command Chat", icon: MessageSquare },
   { to: "/user-guide", label: "User Guide", icon: BookOpen },
   { to: "/audit", label: "Audit & Reports", icon: History },

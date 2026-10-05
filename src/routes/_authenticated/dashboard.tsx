@@ -28,6 +28,20 @@ function Dashboard() {
   const gaps = of("gap").filter((g) => g.status !== "Closed" && g.status !== "Not Applicable");
   const crit = gaps.filter((g) => g.criticality === "Critical").length;
   const ev = of("evidence");
+  
+  // Health Score Calculation
+  const overdueCount = groups.blocked.filter(isOverdue).length + groups.open.filter(isOverdue).length;
+  const expiredCount = ev.filter(isExpired).length;
+  
+  const penalties = [
+    { reason: "Critical open findings", points: crit * 5 },
+    { reason: "Overdue items", points: overdueCount * 2 },
+    { reason: "Expired evidence", points: expiredCount * 3 },
+  ].filter(p => p.points > 0);
+  
+  const totalPenalty = penalties.reduce((sum, p) => sum + p.points, 0);
+  const healthScore = Math.max(0, pct - totalPenalty);
+
   const required = ev.filter((e) => e.status === "Required").length;
   const expired = ev.filter(isExpired).length;
   const today = new Date();
@@ -76,13 +90,21 @@ function Dashboard() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="maritime-card col-span-2 p-4 md:col-span-2 space-y-3">
           <div className="flex justify-between items-end">
-            <p className="label-caps">Overall closure</p>
-            <p className="text-sm font-semibold">{pct}%</p>
+            <p className="label-caps">Readiness Score</p>
+            <p className="text-sm font-semibold text-primary">{healthScore} / 100</p>
           </div>
           <div className="h-3 rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-primary transition-all duration-700" style={{ width: `${pct}%` }} />
+            <div className={`h-full transition-all duration-700 ${healthScore > 80 ? 'bg-success' : healthScore > 50 ? 'bg-warning' : 'bg-destructive'}`} style={{ width: `${healthScore}%` }} />
           </div>
-          <p className="text-xs text-muted-foreground">{groups.completed.length}/{closable.length} items completed</p>
+          <div className="flex items-start justify-between text-xs text-muted-foreground mt-2 border-t border-border/50 pt-2">
+            <span>Base: {pct}% closed ({groups.completed.length}/{closable.length})</span>
+            {penalties.length > 0 && (
+              <div className="text-right">
+                <span className="text-destructive font-medium">Penalties (-{totalPenalty}):</span>
+                {penalties.map(p => <span key={p.reason} className="block text-[10px]">{p.reason} (-{p.points})</span>)}
+              </div>
+            )}
+          </div>
         </div>
         <Kpi label="Open gaps" value={gaps.length} sub={`${crit} critical`} tone={crit ? "text-destructive" : ""} />
         <Kpi label="Gates Go" value={`${gates.filter((g) => g.status === "Go").length}/${gates.length}`} />
