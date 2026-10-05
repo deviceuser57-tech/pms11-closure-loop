@@ -60,6 +60,20 @@ function ShellContent() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const guideKey = (() => {
+    const path = window.location.pathname;
+    const match = path.match(/\\/r\\/([^/]+)/);
+    if (match) return match[1];
+    if (path.includes("/admin/")) return "department";
+    if (path.includes("/ai-review")) return "evidence";
+    if (path.includes("/ai-chat")) return "closure-loop";
+    if (path.includes("/reporting")) return "closure-loop";
+    if (path.includes("/audit")) return "closure-loop";
+    if (path.includes("/import")) return "closure-loop";
+    if (path.includes("/dashboard")) return "closure-loop";
+    return "closure-loop";
+  })();
+
   const results = q.trim()
     ? all.filter(r => `${r.rid} ${r.title} ${r.description ?? ""} ${r.owner ?? ""} ${r.department ?? ""}`.toLowerCase().includes(q.toLowerCase())).slice(0, 20)
     : [];
@@ -68,7 +82,7 @@ function ShellContent() {
     <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl shadow-slate-900/10">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-5"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"><Anchor className="h-5 w-5"/></span><div><p className="font-display text-xl font-semibold leading-none tracking-wide">PMS 11</p><p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/60">Closure Loop</p></div></div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-        <button onClick={() => setSearchOpen(true)} className="mb-2 flex w-full items-center justify-between rounded-sm border border-sidebar-border px-3 py-1.5 text-xs text-sidebar-foreground/70 hover:bg-sidebar-accent"><span>Global Search</span><kbd className="rounded border px-1">Ctrl K</kbd></button>
+        <button onClick={() => setSearchOpen(true)} className="mb-2 flex w-full items-center justify-between rounded-sm border border-sidebar-border px-3 py-1.5 text-xs text-sidebar-foreground/70 hover:bg-sidebar-accent"><span>Global Search</span><kbd className="rounded border px-1">Ctrl K</kbd></button>\n        <a href={`/user-guide#${guideKey}`} className="mb-2 flex w-full items-center gap-2 rounded-sm border border-sidebar-border px-3 py-1.5 text-xs text-sidebar-foreground/70 hover:bg-sidebar-accent">Help / User Guide</a>
         {NAV.map(n => <Link key={n.to} to={n.to as "/dashboard"} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/78 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" activeProps={{ className: "bg-sidebar-accent text-sidebar-primary" }}><n.icon className="h-4 w-4"/>{n.label}</Link>)}
         <Link to="/admin/users" className={`flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent ${isAdmin ? "" : "hidden"}`}><Users className="h-4 w-4"/>Admin Console</Link>
       </nav>
