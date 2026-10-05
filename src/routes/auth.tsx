@@ -3,7 +3,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Anchor, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -132,41 +131,6 @@ function AuthPage() {
     }
   };
 
-  const google = async () => {
-    if (busy) return;
-
-    setBusy(true);
-    setMessage("");
-
-    try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
-
-      if (result.error) {
-        throw result.error;
-      }
-
-      if (!result.redirected) {
-        await goToDashboard();
-      }
-    } catch (error) {
-      console.error("[Auth] Google authentication failed:", error);
-
-      const text =
-        error instanceof Error
-          ? error.message
-          : typeof error === "string"
-            ? error
-            : "Google sign-in failed. Please try again.";
-
-      setMessage(text);
-      toast.error(text);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="maritime-card w-full max-w-sm space-y-5 p-6">
@@ -215,10 +179,6 @@ function AuthPage() {
             {mode === "in" ? "Sign in" : "Create account"}
           </Button>
         </form>
-
-        <Button type="button" variant="outline" className="w-full" onClick={google} disabled={busy}>
-          Continue with Google
-        </Button>
 
         {message && (
           <div
