@@ -50,11 +50,10 @@ export const importUserRoster = createServerFn({ method: "POST" })
     const [{ data: departments, error: de }, { data: roles, error: re }, { data: links, error: le }] = await Promise.all([
       supabaseAdmin.from("departments").select("id,name").eq("active",true),
       supabaseAdmin.from("owner_roles").select("id,name").eq("active",true),
-      supabaseAdmin.from("department_owner_roles").select("department_id,owner_role_id"),
+      supabaseAdmin.from("department_app_roles").select("department_id,role"),
     ]);
     if (de) throw de; if (re) throw re; if (le) throw le;
     const deptByName = new Map((departments ?? []).map(x => [x.name.trim().toLowerCase(), x]));
-    const roleById = new Map((roles ?? []).map(x => [x.id, x]));
     const errors: string[] = [];
     const seenIds = new Set<string>(), seenEmails = new Set<string>();
     for (let i=0;i<data.rows.length;i++) {
@@ -65,7 +64,7 @@ export const importUserRoster = createServerFn({ method: "POST" })
       const d=deptByName.get(r.Department.trim().toLowerCase());
       if (!d) errors.push("Row "+(i+1)+": Department is not present in MASTER_DATA: "+r.Department);
       if (d && r.Role !== "admin") {
-        const allowed = (links ?? []).some(x => x.department_id===d.id && (roleById.get(x.owner_role_id)?.name.trim().toLowerCase()===r.Role.toLowerCase()));
+        const allowed = (links ?? []).some(x => x.department_id===d.id && x.role===r.Role.toLowerCase());
         if (!allowed) errors.push("Row "+(i+1)+": Department ↔ Role is not allowed by MASTER_DATA: "+r.Department+" ↔ "+r.Role);
       }
     }
