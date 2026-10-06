@@ -35,7 +35,7 @@ const ALL="__ALL__";
 function SmartReporting(){
   const {all,isLoading}=useRecords();
   const search = Route.useSearch();
-  const navigate = useNavigate({ from: Route.id });
+  const navigate = useNavigate();
 
   const entity = search.entity ?? ALL;
   const wps = search.wps ?? ALL;
@@ -46,11 +46,11 @@ function SmartReporting(){
   const q = search.q ?? "";
 
   const update = (patch: Partial<ReportingSearch>) => {
-    navigate({ search: (prev) => {
-      const next = { ...prev, ...patch };
+    navigate({ to: "/reporting", search: (() => {
+      const next: Record<string, unknown> = { ...search, ...patch };
       Object.keys(next).forEach(k => { if ((next as any)[k] === ALL) delete (next as any)[k]; });
       return next;
-    }, replace: true });
+    })() as never, replace: true });
   };
 
   const opts=(key:string)=>[...new Set(all.map(r=>String((r as any)[key] ?? "")).filter(Boolean))].sort();
@@ -60,7 +60,7 @@ function SmartReporting(){
     return (entity===ALL||r.entity===entity)&&(wps===ALL||r.wps_id===wps)&&(status===ALL||r.status===status)&&(criticality===ALL||r.criticality===criticality)&&(department===ALL||r.department===department)&&(owner===ALL||r.owner===owner)&&(!q||hay.includes(q.toLowerCase()));
   }),[all,entity,wps,status,criticality,department,owner,q]);
   const rows=filtered.map(r=>({ID:r.rid,Entity:r.entity,Title:r.title,WPS:r.wps_id??"",Gate:r.gate_id??"",Department:r.department??"Unassigned",Owner:r.owner??"Unassigned",Status:r.status,Criticality:r.criticality??"",Due:r.due_date??"",Evidence:r.evidence_ids.length,Acceptance:r.acceptance_ids.length}));
-  const clear=()=>{ navigate({ search: {}, replace: true }); };
+  const clear=()=>{ navigate({ to: "/reporting", search: {} as never, replace: true }); };
 
   return <div className="space-y-5">
     <header className="flex items-end justify-between gap-4"><div><p className="label-caps">Decision support</p><h1 className="font-display text-3xl font-semibold">Smart Reporting</h1><p className="text-sm text-muted-foreground">All report dimensions are live filters over the governed PMS-11 record set. WPS remains the primary axis for readiness reporting.</p></div><div className="flex gap-2"><Button variant="outline" onClick={()=>exportExcel("PMS11_smart_report.xlsx",[{name:"Filtered",rows}])}>Export Excel</Button><Button variant="outline" onClick={()=>exportPdf("PMS 11 Smart Report",[{heading:"Filtered records",head:Object.keys(rows[0]??{Note:""}),body:rows.slice(0,100).map(r=>Object.values(r).map(String))}])}>Export PDF</Button></div></header>

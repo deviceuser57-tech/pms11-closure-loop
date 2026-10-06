@@ -47,7 +47,7 @@ function GateSimulator() {
       return actual;
     };
     
-    return blockers(gate, simGet, all, true); // Assume blockers function can return detailed objects if we pass a flag? 
+    return blockers(gate, simGet, all); // Assume blockers function can return detailed objects if we pass a flag? 
     // Wait, blockers returns string[]. We'll map it differently if needed.
   }, [gate, simulateClosed, all, get]);
 
