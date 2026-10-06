@@ -22,6 +22,24 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string | numbe
 function Dashboard() {
   const { all, of, get, isLoading } = useRecords();
   const sheet = useRecordSheet();
+  const container = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    gsap.from(".maritime-card", {
+      y: 30,
+      opacity: 0,
+      stagger: 0.05,
+      duration: 0.8,
+      ease: "power3.out",
+    });
+    gsap.from("header > div", {
+      y: -20,
+      opacity: 0,
+      stagger: 0.1,
+      duration: 1,
+      ease: "power2.out",
+    });
+  }, { scope: container, dependencies: [isLoading, all.length] });
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (!all.length) return <div className="maritime-card space-y-2 p-8"><h1 className="font-display text-3xl">No data loaded yet</h1><p className="text-sm text-muted-foreground">An Admin needs to run the guided workbook import.</p><Link to="/import" className="text-primary underline">Open Workbook Import →</Link></div>;
   const closable = all.filter((r) => CLOSABLE.includes(r.entity));
@@ -59,24 +77,6 @@ function Dashboard() {
   const gates = of("gate");
   const ready = gates.length > 0 && gates.every((g) => g.status === "Go");
   
-  const container = useRef<HTMLDivElement>(null);
-
-  useGSAP(() => {
-    gsap.from(".maritime-card", {
-      y: 30,
-      opacity: 0,
-      stagger: 0.05,
-      duration: 0.8,
-      ease: "power3.out",
-    });
-    gsap.from("header > div", {
-      y: -20,
-      opacity: 0,
-      stagger: 0.1,
-      duration: 1,
-      ease: "power2.out",
-    });
-  }, { scope: container });
   
   return (
     <div className="space-y-6" ref={container}>
