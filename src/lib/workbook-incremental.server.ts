@@ -23,6 +23,7 @@ export type WorkbookRecord = {
   doc_number?: string;
   revision?: string;
   issuer?: string;
+  department?: string;
   data: Record<string, unknown>;
 };
 
@@ -77,7 +78,8 @@ export function parseWorkbook(buffer: ArrayBuffer): WorkbookRecord[] {
         if (v !== undefined && v !== "") (rec as Record<string,unknown>)[k] = v;
       };
 
-      put("department", scalar(raw,"Department"));\n      if (entity === "rule") {
+      put("department", scalar(raw,"Department"));
+      if (entity === "rule") {
         put("status",scalar(raw,"Status")); put("criticality",scalar(raw,"Criticality")); put("applicability",scalar(raw,"Applicability Status"));
         put("wps_id",scalar(raw,"WPS ID")); put("gate_id",scalar(raw,"Readiness Gate")); put("owner",scalar(raw,"Evidence Owner"));
         put("doc_number",scalar(raw,"Document Number")); put("rule_ids",arr(raw,"Source Rule ID")); put("evidence_ids",arr(raw,"Required Evidence")); put("acceptance_ids",arr(raw,"Acceptance Criteria ID"));
@@ -131,21 +133,40 @@ export function toDbRecord(r: WorkbookRecord) {
   };
 }
 
-export type MasterData = { departments:string[]; ownerRoles:string[]; mappings:Array<{department:string;ownerRole:string}> };
+export type MasterData = { departments:string[]; ownerRoles:string[]; mappings:Array<{department:string;ownerRole:string}>; appRoleMappings:Array<{department:string;appRole:"admin"|"reviewer"|"contributor"|"viewer"}> };
 export function parseMasterData(buffer: ArrayBuffer): MasterData {
   const wb = xlsx.read(new Uint8Array(buffer), { cellDates:true, raw:true });
   const sheet = wb.Sheets["MASTER_DATA"];
-  if (!sheet) return { departments:[], ownerRoles:[], mappings:[] };
+  if (!sheet) return { departments:[], ownerRoles:[], mappings:[], appRoleMappings:[] };
+
   const rows = xlsx.utils.sheet_to_json<Record<string,unknown>>(sheet,{defval:null,raw:true});
   const keys = Object.keys(rows[0] ?? {});
-  const findKey = (label:string,index:number) => keys.find(k=>k.trim().toLowerCase()===label.toLowerCase()) ?? keys[index];
-  const ownerKey=findKey("Owners and Roles",17), deptKey=findKey("Departments",18);
-  const departments=[...new Set(rows.map(r=>String(r[deptKey]??"").trim()).filter(Boolean))];
-  const ownerRoles=[...new Set(rows.map(r=>String(r[ownerKey]??"").trim()).filter(Boolean))];
-  const mappings=[...new Map(rows.map(r=>{const d=String(r[deptKey]??"").trim(),o=String(r[ownerKey]??"").trim();return [d+"\u0000"+o,{department:d,ownerRole:o}] as const;}).filter(([k,v])=>v.department&&v.ownerRole))].map(([,v])=>v);
-  return {departments,ownerRoles,mappings};
-}
+  const findKey = (labels:string[], fallbackIndex?:number) =>
+    keys.find(k => labels.some(label => k.trim().toLowerCase() === label.toLowerCase()))
+    ?? (fallbackIndex === undefined ? undefined : keys[fallbackIndex]);
 
+  const ownerKey=findKey(["Owners and Roles","Owner Role"],17);
+  const deptKey=findKey(["Departments","Department"],18);
+  const appRoleKey=findKey(["Application Role","App Role","User Role","System Role"]);
+
+  const departments=[...new Set(rows.map(r=>String(deptKey ? r[deptKey] ?? "" : "").trim()).filter(Boolean))];
+  const ownerRoles=[...new Set(rows.map(r=>String(ownerKey ? r[ownerKey] ?? "" : "").trim()).filter(Boolean))];
+
+  const mappings=[...new Map(rows.map(r=>{
+    const d=String(deptKey ? r[deptKey] ?? "" : "").trim();
+    const o=String(ownerKey ? r[ownerKey] ?? "" : "").trim();
+    return [d+"\u0000"+o,{department:d,ownerRole:o}] as const;
+  }).filter(([,v])=>v.department&&v.ownerRole))].map(([,v])=>v);
+
+  const validRoles = new Set(["admin","reviewer","contributor","viewer"]);
+  const appRoleMappings=[...new Map(rows.map(r=>{
+    const d=String(deptKey ? r[deptKey] ?? "" : "").trim();
+    const role=String(appRoleKey ? r[appRoleKey] ?? "" : "").trim().toLowerCase();
+    return [d+"\u0000"+role,{department:d,appRole:role as "admin"|"reviewer"|"contributor"|"viewer"}] as const;
+  }).filter(([,v])=>v.department&&validRoles.has(v.appRole)))].map(([,v])=>v);
+
+  return {departments,ownerRoles,mappings,appRoleMappings};
+}
 export function fingerprint(r: unknown): string {
   return JSON.stringify(r, Object.keys((r as Record<string,unknown>) ?? {}).sort());
 }
