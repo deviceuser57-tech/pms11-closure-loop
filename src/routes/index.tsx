@@ -16,7 +16,7 @@ function Landing() {
         <div className="flex items-center gap-2 text-primary"><Anchor className="h-5 w-5" /><span className="label-caps text-primary">Pipe-laying vessel readiness</span></div>
         <h1 className="font-display text-6xl font-semibold tracking-tight text-foreground">PMS 11 Closure Loop — Readiness &amp; Closure Tracker</h1>
         <p className="max-w-3xl text-lg leading-7 text-muted-foreground">Rules → WPS → Activity → Task → Evidence → Acceptance → Gate. An item closes only with an owner, recorded execution, valid evidence, a completed review, met acceptance criteria and no No-Go on its gate.</p>
-        <Link to="/auth" className="inline-flex rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">Enter Test Mode</Link>
+        <Link to="/auth" className="inline-flex rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">Corporate Sign In</Link>
       </div>
       <dl className="maritime-card grid grid-cols-2 gap-x-6 gap-y-4 p-6 md:grid-cols-3">
         {P.map(([k, v]) => <div key={k}><dt className="label-caps">{k}</dt><dd className="text-sm">{v}</dd></div>)}
