@@ -77,7 +77,7 @@ export function parseWorkbook(buffer: ArrayBuffer): WorkbookRecord[] {
         if (v !== undefined && v !== "") (rec as Record<string,unknown>)[k] = v;
       };
 
-      if (entity === "rule") {
+      put("department", scalar(raw,"Department"));\n      if (entity === "rule") {
         put("status",scalar(raw,"Status")); put("criticality",scalar(raw,"Criticality")); put("applicability",scalar(raw,"Applicability Status"));
         put("wps_id",scalar(raw,"WPS ID")); put("gate_id",scalar(raw,"Readiness Gate")); put("owner",scalar(raw,"Evidence Owner"));
         put("doc_number",scalar(raw,"Document Number")); put("rule_ids",arr(raw,"Source Rule ID")); put("evidence_ids",arr(raw,"Required Evidence")); put("acceptance_ids",arr(raw,"Acceptance Criteria ID"));
@@ -127,8 +127,23 @@ export function toDbRecord(r: WorkbookRecord) {
     expiry_date:r.expiry_date ?? null, criticality:r.criticality ?? null, source_kind:"imported",
     applicability:r.applicability ?? null, evidence_ids:r.evidence_ids ?? [], acceptance_ids:r.acceptance_ids ?? [],
     rule_ids:r.rule_ids ?? [], links:r.links ?? [], doc_number:r.doc_number ?? null, revision:r.revision ?? null,
-    issuer:r.issuer ?? null, data:r.data ?? {},
+    issuer:r.issuer ?? null, department:r.department ?? null, data:r.data ?? {},
   };
+}
+
+export type MasterData = { departments:string[]; ownerRoles:string[]; mappings:Array<{department:string;ownerRole:string}> };
+export function parseMasterData(buffer: ArrayBuffer): MasterData {
+  const wb = xlsx.read(new Uint8Array(buffer), { cellDates:true, raw:true });
+  const sheet = wb.Sheets["MASTER_DATA"];
+  if (!sheet) return { departments:[], ownerRoles:[], mappings:[] };
+  const rows = xlsx.utils.sheet_to_json<Record<string,unknown>>(sheet,{defval:null,raw:true});
+  const keys = Object.keys(rows[0] ?? {});
+  const findKey = (label:string,index:number) => keys.find(k=>k.trim().toLowerCase()===label.toLowerCase()) ?? keys[index];
+  const ownerKey=findKey("Owners and Roles",17), deptKey=findKey("Departments",18);
+  const departments=[...new Set(rows.map(r=>String(r[deptKey]??"").trim()).filter(Boolean))];
+  const ownerRoles=[...new Set(rows.map(r=>String(r[ownerKey]??"").trim()).filter(Boolean))];
+  const mappings=[...new Map(rows.map(r=>{const d=String(r[deptKey]??"").trim(),o=String(r[ownerKey]??"").trim();return [d+"\u0000"+o,{department:d,ownerRole:o}] as const;}).filter(([k,v])=>v.department&&v.ownerRole))].map(([,v])=>v);
+  return {departments,ownerRoles,mappings};
 }
 
 export function fingerprint(r: unknown): string {
