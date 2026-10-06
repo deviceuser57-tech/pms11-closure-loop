@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ShieldCheck, Plus, Pencil, Trash2, BookOpen, RefreshCw } from "lucide-react";
+import { ShieldCheck, Plus, Pencil, Trash2, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Tables } from "@/integrations/supabase/types";
-import { wpsRelationshipCounts, useRecords } from "@/lib/records";
+import { useRecords } from "@/lib/records";
 
 const ROLES = ["admin", "reviewer", "contributor", "viewer"] as const;
 type Role = typeof ROLES[number];
