@@ -118,18 +118,27 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          company_id: string | null
+          job_title: string | null
+          must_change_password: boolean
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           email?: string | null
           id: string
+          company_id?: string | null
+          job_title?: string | null
+          must_change_password?: boolean
         }
         Update: {
           created_at?: string
           display_name?: string | null
           email?: string | null
           id?: string
+          company_id?: string | null
+          job_title?: string | null
+          must_change_password?: boolean
         }
         Relationships: []
       }
@@ -301,6 +310,36 @@ export type Database = {
         Relationships: []
       }
     }
+      departments: {
+        Row: { id: string; name: string; active: boolean; created_at: string }
+        Insert: { id?: string; name: string; active?: boolean; created_at?: string }
+        Update: { id?: string; name?: string; active?: boolean; created_at?: string }
+        Relationships: []
+      }
+      owner_roles: {
+        Row: { id: string; name: string; active: boolean; created_at: string }
+        Insert: { id?: string; name: string; active?: boolean; created_at?: string }
+        Update: { id?: string; name?: string; active?: boolean; created_at?: string }
+        Relationships: []
+      }
+      department_owner_roles: {
+        Row: { department_id: string; owner_role_id: string; created_at: string }
+        Insert: { department_id: string; owner_role_id: string; created_at?: string }
+        Update: { department_id?: string; owner_role_id?: string; created_at?: string }
+        Relationships: []
+      }
+      department_app_roles: {
+        Row: { department_id: string; role: Database["public"]["Enums"]["app_role"] }
+        Insert: { department_id: string; role: Database["public"]["Enums"]["app_role"] }
+        Update: { department_id?: string; role?: Database["public"]["Enums"]["app_role"] }
+        Relationships: []
+      }
+      admin_reset_events: {
+        Row: { id: string; reset_at: string; reset_by: string; detail: Json }
+        Insert: { id?: string; reset_at?: string; reset_by: string; detail?: Json }
+        Update: { id?: string; reset_at?: string; reset_by?: string; detail?: Json }
+        Relationships: []
+      }
     Views: {
       [_ in never]: never
     }
@@ -320,7 +359,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_member: { Args: { _u: string }; Returns: boolean }
+      is_member: { Args: { _u: string }; Returns: boolean }\n      activate_first_login: { Args: never; Returns: undefined }\n      reset_all_project_records: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "reviewer" | "contributor" | "viewer"
