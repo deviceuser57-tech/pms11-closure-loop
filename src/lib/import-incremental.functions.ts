@@ -15,7 +15,6 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const bytes = Uint8Array.from(Buffer.from(data.base64, "base64"));
     const incoming = parseWorkbook(bytes.buffer);
     const master = parseMasterData(bytes.buffer);
-    const master = parseMasterData(bytes.buffer);
     const { data: existing, error } = await context.supabase
       .from("records").select("*").eq("source_kind","imported").in("rid", [...new Set(incoming.map(r=>r.rid))]);
     if (error) throw error;
@@ -31,8 +30,10 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const { data: roles, error: re } = await context.supabase.from("owner_roles").select("id,name");
     if (re) throw re;
     const roleByName = new Map((roles ?? []).map(o=>[o.name.trim(),o.id]));
-    await context.supabase.from("department_owner_roles").delete().neq("department_id","00000000-0000-0000-0000-000000000000");
-    await context.supabase.from("department_app_roles").delete().neq("department_id","00000000-0000-0000-0000-000000000000");
+    const { error: ownerMapDeleteError } = await context.supabase.from("department_owner_roles").delete().neq("department_id","00000000-0000-0000-0000-000000000000");
+    if (ownerMapDeleteError) throw ownerMapDeleteError;
+    const { error: appRoleDeleteError } = await context.supabase.from("department_app_roles").delete().neq("department_id","00000000-0000-0000-0000-000000000000");
+    if (appRoleDeleteError) throw appRoleDeleteError;
     const mappings = master.mappings.map(m=>({department_id:deptByName.get(m.department),owner_role_id:roleByName.get(m.ownerRole)})).filter(x=>x.department_id&&x.owner_role_id);
     if (mappings.length) { const {error:e}=await context.supabase.from("department_owner_roles").upsert(mappings as never,{onConflict:"department_id,owner_role_id"}); if(e) throw e; }
     const appRoleMap = master.appRoleMappings
@@ -49,7 +50,7 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
       else {
         const next = toDbRecord(r);
         const sourceChanged = JSON.stringify((old as Record<string,unknown>).data ?? {}) !== JSON.stringify(r.data ?? {});
-        const comparable = ["title","description","wps_id","gate_id","parent_id","status","owner","reviewer","approver","due_date","expiry_date","criticality","applicability","evidence_ids","acceptance_ids","rule_ids","links","doc_number","revision","issuer"];
+        const comparable = ["title","description","wps_id","gate_id","parent_id","status","owner","reviewer","approver","due_date","expiry_date","criticality","applicability","evidence_ids","acceptance_ids","rule_ids","links","doc_number","revision","issuer","department"];
         const diff = sourceChanged ? comparable.filter(k => JSON.stringify((old as Record<string,unknown>)[k] ?? null) !== JSON.stringify((next as Record<string,unknown>)[k] ?? null)) : [];
         if (!diff.length) unchanged.push({ entity:r.entity, rid:r.rid });
         else changed.push({ entity:r.entity, rid:r.rid, title:r.title, fields:diff });
@@ -75,6 +76,7 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
     const { parseWorkbook, parseMasterData, toDbRecord } = await import("./workbook-incremental.server");
     const bytes = Uint8Array.from(Buffer.from(data.base64, "base64"));
     const incoming = parseWorkbook(bytes.buffer);
+    const master = parseMasterData(bytes.buffer);
     const { data: existing, error } = await context.supabase.from("records").select("*").eq("source_kind","imported");
     if (error) throw error;
     const byKey = new Map((existing ?? []).map((r) => [r.entity + ":" + r.rid, r]));
