@@ -47,12 +47,11 @@ export const importUserRoster = createServerFn({ method: "POST" })
     const { data: admin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!admin) throw new Error("Only Admins can import the company roster.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: departments, error: de }, { data: roles, error: re }, { data: links, error: le }] = await Promise.all([
+    const [{ data: departments, error: de }, { data: links, error: le }] = await Promise.all([
       supabaseAdmin.from("departments").select("id,name").eq("active",true),
-      supabaseAdmin.from("owner_roles").select("id,name").eq("active",true),
       supabaseAdmin.from("department_app_roles").select("department_id,role"),
     ]);
-    if (de) throw de; if (re) throw re; if (le) throw le;
+    if (de) throw de; if (le) throw le;
     const deptByName = new Map((departments ?? []).map(x => [x.name.trim().toLowerCase(), x]));
     const errors: string[] = [];
     const seenIds = new Set<string>(), seenEmails = new Set<string>();
