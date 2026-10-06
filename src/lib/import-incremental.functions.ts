@@ -31,6 +31,11 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const roleByName = new Map((roles ?? []).map(o=>[o.name.trim(),o.id]));
     const mappings = master.mappings.map(m=>({department_id:deptByName.get(m.department),owner_role_id:roleByName.get(m.ownerRole)})).filter(x=>x.department_id&&x.owner_role_id);
     if (mappings.length) { const {error:e}=await context.supabase.from("department_owner_roles").upsert(mappings as never,{onConflict:"department_id,owner_role_id"}); if(e) throw e; }
+    const appRoleMap = master.mappings
+      .filter(m=>["admin","reviewer","contributor","viewer"].includes(m.ownerRole.trim().toLowerCase()))
+      .map(m=>({department_id:deptByName.get(m.department),role:m.ownerRole.trim().toLowerCase()}))
+      .filter(x=>x.department_id);
+    if (appRoleMap.length) { const {error:e}=await context.supabase.from("department_app_roles").upsert(appRoleMap as never,{onConflict:"department_id,role"}); if(e) throw e; }
     const masterSummary = { departments: master.departments.length, ownerRoles: master.ownerRoles.length, mappings: master.mappings.length };
     type DiffRow = { entity: string; rid: string; title?: string; fields?: string[] };
     const added: DiffRow[] = [], changed: DiffRow[] = [], unchanged: DiffRow[] = [], conflicts: DiffRow[] = [];
