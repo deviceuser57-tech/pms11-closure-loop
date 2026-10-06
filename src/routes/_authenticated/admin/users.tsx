@@ -200,7 +200,7 @@ function UsersAdmin() {
 
       <Pms11AdminControls />
 
-      {/* ── Permission Matrix ──────────────────────────────────────────────── */
+      {/* ── Permission Matrix ──────────────────────────────────────────────── */}
       <section className="maritime-card overflow-hidden">
         <div className="border-b border-border p-5">
           <p className="label-caps">Access control</p>

@@ -7,8 +7,7 @@ import { importUserRoster, validateUserRoster, resetAllProjectRecords } from "@/
 type Roster = { Company_ID:string; Full_Name:string; Email:string; Department:string; Role:"admin"|"reviewer"|"contributor"|"viewer"; Job_Title:string };
 
 function parseCsv(text:string): Roster[] {
-  const lines=text.replace(/^\uFEFF/,"").split(/\r?
-/).filter(x=>x.trim());
+  const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(x=>x.trim());
   if(lines.length<2) throw new Error("CSV must contain a header row and at least one employee row.");
   const parseLine=(line:string)=>{const out:string[]=[];let cur="",quote=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(quote&&line[i+1]==='"'){cur+='"';i++;}else quote=!quote;}else if(c===','&&!quote){out.push(cur.trim());cur="";}else cur+=c;}out.push(cur.trim());return out;};
   const headers=parseLine(lines[0]).map(x=>x.trim());
