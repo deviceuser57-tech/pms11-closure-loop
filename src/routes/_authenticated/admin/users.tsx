@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Tables } from "@/integrations/supabase/types";
 import { useRecords } from "@/lib/records";
+import { Pms11AdminControls } from "@/components/admin/Pms11AdminControls";
 
 const ROLES = ["admin", "reviewer", "contributor", "viewer"] as const;
 type Role = typeof ROLES[number];
@@ -197,7 +198,9 @@ function UsersAdmin() {
         <p className="text-sm text-muted-foreground">Admin sees the full PMS-11 dataset. Department users are restricted at database/RLS level to records explicitly assigned to their department.</p>
       </header>
 
-      {/* ── Permission Matrix ──────────────────────────────────────────────── */}
+      <Pms11AdminControls />
+
+      {/* ── Permission Matrix ──────────────────────────────────────────────── */
       <section className="maritime-card overflow-hidden">
         <div className="border-b border-border p-5">
           <p className="label-caps">Access control</p>
