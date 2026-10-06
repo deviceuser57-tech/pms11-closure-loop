@@ -119,6 +119,7 @@ export type Database = {
           email: string | null
           id: string
           company_id: string | null
+          department: string | null
           job_title: string | null
           must_change_password: boolean
         }
@@ -128,6 +129,7 @@ export type Database = {
           email?: string | null
           id: string
           company_id?: string | null
+          department?: string | null
           job_title?: string | null
           must_change_password?: boolean
         }
@@ -137,6 +139,7 @@ export type Database = {
           email?: string | null
           id?: string
           company_id?: string | null
+          department?: string | null
           job_title?: string | null
           must_change_password?: boolean
         }
@@ -150,6 +153,7 @@ export type Database = {
           closure_pct: number
           created_at: string
           criticality: string | null
+          department: string | null
           data: Json
           description: string | null
           doc_number: string | null
@@ -185,6 +189,7 @@ export type Database = {
           closure_pct?: number
           created_at?: string
           criticality?: string | null
+          department?: string | null
           data?: Json
           description?: string | null
           doc_number?: string | null
@@ -220,6 +225,7 @@ export type Database = {
           closure_pct?: number
           created_at?: string
           criticality?: string | null
+          department?: string | null
           data?: Json
           description?: string | null
           doc_number?: string | null
