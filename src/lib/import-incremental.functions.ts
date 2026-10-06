@@ -29,6 +29,8 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const { data: roles, error: re } = await context.supabase.from("owner_roles").select("id,name");
     if (re) throw re;
     const roleByName = new Map((roles ?? []).map(o=>[o.name.trim(),o.id]));
+    await context.supabase.from("department_owner_roles").delete().neq("department_id","00000000-0000-0000-0000-000000000000");
+    await context.supabase.from("department_app_roles").delete().neq("department_id","00000000-0000-0000-0000-000000000000");
     const mappings = master.mappings.map(m=>({department_id:deptByName.get(m.department),owner_role_id:roleByName.get(m.ownerRole)})).filter(x=>x.department_id&&x.owner_role_id);
     if (mappings.length) { const {error:e}=await context.supabase.from("department_owner_roles").upsert(mappings as never,{onConflict:"department_id,owner_role_id"}); if(e) throw e; }
     const appRoleMap = master.mappings
