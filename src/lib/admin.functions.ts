@@ -40,6 +40,33 @@ export const resetAllProjectRecords = createServerFn({ method: "POST" })
     return { ...(data as Record<string, unknown>), storageDeleted: files.length };
   });
 
+export const validateUserRoster = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(d => rosterInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: admin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!admin) throw new Error("Only Admins can validate the company roster.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [{ data: departments, error: de }, { data: links, error: le }] = await Promise.all([
+      supabaseAdmin.from("departments").select("id,name").eq("active",true),
+      supabaseAdmin.from("department_app_roles").select("department_id,role"),
+    ]);
+    if (de) throw de; if (le) throw le;
+    const deptByName = new Map((departments ?? []).map(x => [x.name.trim().toLowerCase(), x]));
+    const errors: string[] = [];
+    const seenIds = new Set<string>(), seenEmails = new Set<string>();
+    for (let i=0;i<data.rows.length;i++) {
+      const r=data.rows[i], id=r.Company_ID.trim(), email=r.Email.trim().toLowerCase();
+      if (seenIds.has(id)) errors.push("Row "+(i+1)+": duplicate Company_ID "+id);
+      if (seenEmails.has(email)) errors.push("Row "+(i+1)+": duplicate Email "+email);
+      seenIds.add(id); seenEmails.add(email);
+      const d=deptByName.get(r.Department.trim().toLowerCase());
+      if (!d) errors.push("Row "+(i+1)+": Department is not present in MASTER_DATA: "+r.Department);
+      if (d && !(links ?? []).some(x => x.department_id===d.id && x.role===r.Role)) errors.push("Row "+(i+1)+": Department ↔ Role is not allowed by MASTER_DATA: "+r.Department+" ↔ "+r.Role);
+    }
+    return { valid: errors.length===0, rows:data.rows.length, errors };
+  });
+
 export const importUserRoster = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(d => rosterInput.parse(d))
