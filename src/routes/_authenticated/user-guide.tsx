@@ -33,18 +33,18 @@ const elements = [
 ];
 
 const workflows = [
-  { id: "wf-overview", title: "1. نظرة عامة — Closure Loop", file: "/workflows/01-closure-loop-overview.svg", text: "يُظهر المسار الكامل من المتطلب إلى WPS ثم التنفيذ والأدلة والقبول والبوابة. هذا هو النموذج الذهني الأساسي للتطبيق." },
-  { id: "wf-task", title: "2. تنفيذ المهمة والإغلاق", file: "/workflows/02-task-execution-closure.svg", text: "Task → Execution → Evidence → Review → Approval → Closure. تغيير الحالة وحده لا يغلق المهمة." },
-  { id: "wf-evidence", title: "3. مراجعة الدليل وإعادة العمل", file: "/workflows/03-evidence-review-rework.svg", text: "عند رفض الدليل لا ينتهي المسار؛ يعود إلى التصحيح ثم إعادة التقديم والمراجعة." },
-  { id: "wf-capa", title: "4. Gap / CAPA", file: "/workflows/04-gap-capa-closure.svg", text: "الفجوة تُعالج بإجراء، ثم دليل، ثم تحقق، ثم إغلاق مثبت." },
-  { id: "wf-gate", title: "5. Gate Review", file: "/workflows/05-gate-review.svg", text: "البوابة تجمع العوائق والمسؤولية والإجراء التصحيحي ثم إعادة المراجعة قبل القرار." },
-  { id: "wf-quorum", title: "6. Gate Quorum", file: "/workflows/06-gate-quorum.svg", text: "قرار GO أو Conditional أو NO-GO يعتمد على المراجعين/المعتمدين والـ quorum، وليس على رأي فردي فقط." },
-  { id: "wf-expiry", title: "7. Evidence Expiry", file: "/workflows/07-evidence-expiry.svg", text: "الدليل المنتهي لا يبقى دليلاً صالحاً لمجرد أنه موجود؛ يجب تجديده أو استبداله وإدارة النسخة القديمة." },
-  { id: "wf-change", title: "8. Change Management", file: "/workflows/08-change-management.svg", text: "التغيير يمر بتقييم الأثر وتحديد السجلات المتأثرة ثم الموافقة والتنفيذ والتحقق." },
-  { id: "wf-risk", title: "9. Risk Management", file: "/workflows/09-risk-management.svg", text: "الخطر يتحول إلى إجراء تخفيف قابل للإثبات، ثم تحقق، ثم متابعة أثره على البوابات." },
-  { id: "wf-import", title: "10. Workbook Import", file: "/workflows/10-workbook-import.svg", text: "الاستيراد يعمل كحلقة Compare أولاً ثم New/Changed/Conflict ثم Resolution ثم Apply مع الحفاظ على بيانات التنفيذ والمراجعة." },
-  { id: "wf-doc", title: "11. Document Control", file: "/workflows/11-document-control.svg", text: "المستند ينتقل من Draft إلى Review ثم Accepted، مع تمييز النسخ الحالية عن Superseded/Expired." },
-  { id: "wf-trace", title: "12. Traceability", file: "/workflows/12-traceability.svg", text: "المصفوفة تربط Rule/WPS بالتنفيذ والدليل والقبول والبوابة لتحديد أين يوجد الإثبات وأين توجد الفجوة." },
+  { id: "wf-overview", title: "1. نظرة عامة — Closure Loop", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/01_traceability.gif", text: "يُظهر المسار الكامل من المتطلب إلى WPS ثم التنفيذ والأدلة والقبول والبوابة. هذا هو النموذج الذهني الأساسي للتطبيق." },
+  { id: "wf-task", title: "2. تنفيذ المهمة والإغلاق", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/02_execution_closure.gif", text: "Task → Execution → Evidence → Review → Approval → Closure. تغيير الحالة وحده لا يغلق المهمة." },
+  { id: "wf-evidence", title: "3. مراجعة الدليل وإعادة العمل", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/03_evidence_rejection.gif", text: "عند رفض الدليل لا ينتهي المسار؛ يعود إلى التصحيح ثم إعادة التقديم والمراجعة." },
+  { id: "wf-capa", title: "4. Gap / CAPA", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/04_gap_capa.gif", text: "الفجوة تُعالج بإجراء، ثم دليل، ثم تحقق، ثم إغلاق مثبت." },
+  { id: "wf-gate", title: "5. Gate Review", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/05_gate_blocker.gif", text: "البوابة تجمع العوائق والمسؤولية والإجراء التصحيحي ثم إعادة المراجعة قبل القرار." },
+  { id: "wf-quorum", title: "6. Gate Quorum", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/06_gate_quorum.gif", text: "قرار GO أو Conditional أو NO-GO يعتمد على المراجعين/المعتمدين والـ quorum، وليس على رأي فردي فقط." },
+  { id: "wf-expiry", title: "7. Evidence Expiry", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/07_evidence_expiry.gif", text: "الدليل المنتهي لا يبقى دليلاً صالحاً لمجرد أنه موجود؛ يجب تجديده أو استبداله وإدارة النسخة القديمة." },
+  { id: "wf-change", title: "8. Change Management", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/08_change_request.gif", text: "التغيير يمر بتقييم الأثر وتحديد السجلات المتأثرة ثم الموافقة والتنفيذ والتحقق." },
+  { id: "wf-risk", title: "9. Risk Management", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/09_risk_mitigation.gif", text: "الخطر يتحول إلى إجراء تخفيف قابل للإثبات، ثم تحقق، ثم متابعة أثره على البوابات." },
+  { id: "wf-import", title: "10. Workbook Import", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/10_import_resolution.gif", text: "الاستيراد يعمل كحلقة Compare أولاً ثم New/Changed/Conflict ثم Resolution ثم Apply مع الحفاظ على بيانات التنفيذ والمراجعة." },
+  { id: "wf-doc", title: "11. Document Control", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/11_document_control.gif", text: "المستند ينتقل من Draft إلى Review ثم Accepted، مع تمييز النسخ الحالية عن Superseded/Expired." },
+  { id: "wf-trace", title: "12. Traceability", file: "https://raw.githubusercontent.com/deviceuser57-tech/pms11-closure-loop/main/Doc/user-guide/images/12_traceability_reverse.gif", text: "المصفوفة تربط Rule/WPS بالتنفيذ والدليل والقبول والبوابة لتحديد أين يوجد الإثبات وأين توجد الفجوة." },
 ];
 
 function UserGuide() {
