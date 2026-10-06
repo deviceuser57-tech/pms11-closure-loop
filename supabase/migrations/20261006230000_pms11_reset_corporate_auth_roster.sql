@@ -55,3 +55,16 @@ begin
 end $$;
 revoke all on function public.reset_all_project_records() from public, anon;
 grant execute on function public.reset_all_project_records() to authenticated;
+
+create table if not exists public.department_app_roles (
+  department_id uuid not null references public.departments(id) on delete cascade,
+  role public.app_role not null,
+  primary key (department_id, role)
+);
+alter table public.department_app_roles enable row level security;
+drop policy if exists "authenticated read department app roles" on public.department_app_roles;
+create policy "authenticated read department app roles" on public.department_app_roles for select to authenticated using (true);
+drop policy if exists "admins manage department app roles" on public.department_app_roles;
+create policy "admins manage department app roles" on public.department_app_roles for all to authenticated using (public.has_role(auth.uid(),'admin')) with check (public.has_role(auth.uid(),'admin'));
+
+-- Corporate user provisioning is authoritative; public self-signup is not used by the application.
