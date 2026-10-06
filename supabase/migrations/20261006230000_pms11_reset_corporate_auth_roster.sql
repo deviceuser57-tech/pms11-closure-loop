@@ -68,3 +68,24 @@ drop policy if exists "admins manage department app roles" on public.department_
 create policy "admins manage department app roles" on public.department_app_roles for all to authenticated using (public.has_role(auth.uid(),'admin')) with check (public.has_role(auth.uid(),'admin'));
 
 -- Corporate user provisioning is authoritative; public self-signup is not used by the application.
+
+create or replace function public.handle_new_user() returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.email is null or lower(new.email) not like '%@pms.eg' then
+    raise exception 'PMS-11 accounts must use an authorized @pms.eg business email';
+  end if;
+  insert into public.profiles(id,email,display_name,must_change_password)
+  values(new.id,new.email,coalesce(new.raw_user_meta_data->>'full_name',split_part(new.email,'@',1)),false)
+  on conflict(id) do update set email=excluded.email;
+  if not exists(select 1 from public.user_roles where role='admin') then
+    insert into public.user_roles(user_id,role) values(new.id,'admin') on conflict do nothing;
+  else
+    insert into public.user_roles(user_id,role) values(new.id,'viewer') on conflict do nothing;
+  end if;
+  return new;
+end
+$$;
