@@ -11,14 +11,27 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Only Admins can preview workbook updates.");
 
-    const { parseWorkbook, toDbRecord } = await import("./workbook-incremental.server");
+    const { parseWorkbook, parseMasterData, toDbRecord } = await import("./workbook-incremental.server");
     const bytes = Uint8Array.from(Buffer.from(data.base64, "base64"));
-    const incoming = parseWorkbook(bytes.buffer);
+    const incoming = parseWorkbook(bytes.buffer);\n    const master = parseMasterData(bytes.buffer);
     const { data: existing, error } = await context.supabase
       .from("records").select("*").eq("source_kind","imported").in("rid", [...new Set(incoming.map(r=>r.rid))]);
     if (error) throw error;
 
     const byKey = new Map((existing ?? []).map((r) => [r.entity + ":" + r.rid, r]));
+    const { data: departments, error: de } = await context.supabase.from("departments").upsert(master.departments.map(name=>({name,active:true})),{onConflict:"name"}).select("id,name");
+    if (de) throw de;
+    const deptByName = new Map((departments ?? []).map(d=>[d.name.trim(),d.id]));
+    for (const name of master.ownerRoles) {
+      const { error:e } = await context.supabase.from("owner_roles").upsert({name,active:true},{onConflict:"name"});
+      if (e) throw e;
+    }
+    const { data: roles, error: re } = await context.supabase.from("owner_roles").select("id,name");
+    if (re) throw re;
+    const roleByName = new Map((roles ?? []).map(o=>[o.name.trim(),o.id]));
+    const mappings = master.mappings.map(m=>({department_id:deptByName.get(m.department),owner_role_id:roleByName.get(m.ownerRole)})).filter(x=>x.department_id&&x.owner_role_id);
+    if (mappings.length) { const {error:e}=await context.supabase.from("department_owner_roles").upsert(mappings as never,{onConflict:"department_id,owner_role_id"}); if(e) throw e; }
+    const masterSummary = { departments: master.departments.length, ownerRoles: master.ownerRoles.length, mappings: master.mappings.length };
     type DiffRow = { entity: string; rid: string; title?: string; fields?: string[] };
     const added: DiffRow[] = [], changed: DiffRow[] = [], unchanged: DiffRow[] = [], conflicts: DiffRow[] = [];
 
@@ -39,7 +52,7 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
       candidates:incoming.length,
       added, changed, unchanged, conflicts,
       counts:{ added:added.length, changed:changed.length, unchanged:unchanged.length, conflicts:conflicts.length },
-      note:"Only new and changed workbook records will be applied. Existing execution/review/closure/department fields are preserved.",
+      note:"Only new and changed workbook records will be applied. Existing execution/review/closure/department fields are preserved.",\n      masterData:masterSummary,
     };
   });
 
@@ -78,7 +91,7 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
 
     const summary = {
       mode:"incremental", candidates:incoming.length, added, changed, unchanged,
-      preserved:"execution_note, review_status, closure_pct, no_go_active, department and audit history",
+      preserved:"execution_note, review_status, closure_pct, no_go_active, department and audit history",\n      masterData:{departments:master.departments.length,ownerRoles:master.ownerRoles.length,mappings:master.mappings.length},
     };
     await context.supabase.from("import_runs").insert({ summary } as never);
     return summary;
