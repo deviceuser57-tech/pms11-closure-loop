@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated")({
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
     const { data: profile } = await supabase.from("profiles").select("must_change_password").eq("id", data.user.id).maybeSingle();
-    if (profile?.must_change_password) throw redirect({ to: "/auth", search: { first: "1" } });
+    if (profile?.must_change_password) throw redirect({ to: "/auth" });
     return { user: data.user };
   },
   component: Shell,
