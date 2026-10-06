@@ -7,7 +7,8 @@ import { importUserRoster, validateUserRoster, resetAllProjectRecords } from "@/
 type Roster = { Company_ID:string; Full_Name:string; Email:string; Department:string; Role:"admin"|"reviewer"|"contributor"|"viewer"; Job_Title:string };
 
 function parseCsv(text:string): Roster[] {
-  const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(x=>x.trim());
+  const lines=text.replace(/^\uFEFF/,"").split(/\r?
+/).filter(x=>x.trim());
   if(lines.length<2) throw new Error("CSV must contain a header row and at least one employee row.");
   const parseLine=(line:string)=>{const out:string[]=[];let cur="",quote=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(quote&&line[i+1]==='"'){cur+='"';i++;}else quote=!quote;}else if(c===','&&!quote){out.push(cur.trim());cur="";}else cur+=c;}out.push(cur.trim());return out;};
   const headers=parseLine(lines[0]).map(x=>x.trim());
@@ -20,7 +21,8 @@ export function Pms11AdminControls(){
   const [rows,setRows]=useState<Roster[]>([]);
   const [busy,setBusy]=useState(false);
   const [resetting,setResetting]=useState(false);
-  const [fileName,setFileName]=useState("");\n  const [validation,setValidation]=useState<{valid:boolean;errors:string[]}|null>(null);
+  const [fileName,setFileName]=useState("");
+  const [validation,setValidation]=useState<{valid:boolean;errors:string[]}|null>(null);
   const [resetConfirm,setResetConfirm]=useState("");
   const onCsv=async(file:File|null)=>{if(!file)return;try{setRows(parseCsv(await file.text()));setFileName(file.name);setValidation(null);toast.success("Roster CSV loaded for validation.");}catch(e){toast.error(e instanceof Error?e.message:String(e));}};
   const doValidate=async()=>{if(!rows.length)return;setBusy(true);try{const r=await validateUserRoster({data:{rows}});setValidation(r);if(r.valid)toast.success("Roster validation passed.");else toast.error(r.errors.length+" validation issue(s) found.");}catch(e){toast.error(e instanceof Error?e.message:String(e));}finally{setBusy(false)}};
@@ -28,7 +30,7 @@ export function Pms11AdminControls(){
   const doReset=async()=>{if(resetConfirm!=="RESET")return toast.error("Type RESET to confirm.");setResetting(true);try{const r=await resetAllProjectRecords();toast.success("Project reset completed. Storage files deleted: "+String(r.storageDeleted??0));setResetConfirm("");}catch(e){toast.error(e instanceof Error?e.message:String(e));}finally{setResetting(false);}};
   return <div className="space-y-6">
     <section className="maritime-card overflow-hidden">
-      <div className="border-b border-border p-5"><p className="label-caps">Identity & access</p><h2 className="font-display text-2xl">Import Users & Roster</h2><p className="mt-1 text-sm text-muted-foreground">Separate CSV source. Department and Role are validated against the governed Department → Owner Role master data before any account is created or updated.</p></div>
+      <div className="border-b border-border p-5"><p className="label-caps">Identity & access</p><h2 className="font-display text-2xl">Import Users & Roster</h2><p className="mt-1 text-sm text-muted-foreground">Separate CSV source. Department and Application Role are validated against the governed MASTER_DATA Department → Application Role mapping before any account is created or updated.</p></div>
       <div className="space-y-4 p-5">
         <div className="flex flex-wrap items-center gap-3"><input id="pms11-roster-csv" type="file" accept=".csv,text/csv" className="hidden" onChange={e=>void onCsv(e.target.files?.[0]??null)}/><label htmlFor="pms11-roster-csv" className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent"><FileUp className="h-4 w-4"/>Choose CSV</label>{fileName&&<span className="text-sm">{fileName} · {rows.length} rows</span>}<Button variant="outline" onClick={()=>void doValidate()} disabled={!rows.length||busy}>{busy?"Validating…":"Validate CSV"}</Button><Button onClick={()=>void doImport()} disabled={!rows.length||!validation?.valid||busy}>{busy?"Importing…":"Import Validated Users"}</Button></div>
         <p className="text-xs text-muted-foreground">Required columns: Company_ID, Full_Name, Email, Department, Role, Job_Title. Email must end in @pms.eg. Company_ID is the unique employee identity.</p>
