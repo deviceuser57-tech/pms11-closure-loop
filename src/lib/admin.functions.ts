@@ -22,7 +22,7 @@ async function requireAdmin(context: { userId: string; supabase: any }) {
     _user_id: context.userId,
     _role: "admin",
   });
-  if (error) throw error;
+  if (error) throw new Error(error.message || JSON.stringify(error));
   if (!data) throw new Error("Only Admins can perform this operation.");
 }
 
@@ -111,7 +111,7 @@ export const resetAllProjectRecords = createServerFn({ method: "POST" })
 
     async function collectFiles(path = ""): Promise<string[]> {
       const { data, error } = await supabaseAdmin.storage.from("evidence").list(path, { limit: 1000 });
-      if (error) throw error;
+      if (error) throw new Error(error.message || JSON.stringify(error));
       const files: string[] = [];
       for (const item of data ?? []) {
         const child = path ? path + "/" + item.name : item.name;
@@ -124,11 +124,11 @@ export const resetAllProjectRecords = createServerFn({ method: "POST" })
     const files = await collectFiles();
     for (let i = 0; i < files.length; i += 1000) {
       const { error } = await supabaseAdmin.storage.from("evidence").remove(files.slice(i, i + 1000));
-      if (error) throw error;
+      if (error) throw new Error(error.message || JSON.stringify(error));
     }
 
     const { data, error } = await context.supabase.rpc("reset_all_project_records");
-    if (error) throw error;
+    if (error) throw new Error(error.message || JSON.stringify(error));
 
     return { ...(data as Record<string, unknown>), storageDeleted: files.length };
   });
@@ -144,7 +144,7 @@ export const validateUserRoster = createServerFn({ method: "POST" })
     const { data: existingProfiles, error } = await supabaseAdmin
       .from("profiles")
       .select("id,company_id,email");
-    if (error) throw error;
+    if (error) throw new Error(error.message || JSON.stringify(error));
 
     const errors = validateRows(data.rows, governance, existingProfiles ?? []);
     return {
@@ -196,7 +196,7 @@ export const importUserRoster = createServerFn({ method: "POST" })
           email_confirm: true,
           user_metadata: { full_name: r.Full_Name },
         });
-        if (error) throw error;
+        if (error) throw new Error(error.message || JSON.stringify(error));
       } else {
         const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
           email,
@@ -251,7 +251,7 @@ export const beginFirstLogin = createServerFn({ method: "POST" })
       .eq("email", data.email)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) throw new Error(error.message || JSON.stringify(error));
     if (!profile) throw new Error("This corporate email is not provisioned in PMS-11.");
     if (!profile.must_change_password) return { firstLogin: false as const };
 
@@ -281,6 +281,6 @@ export const activateFirstLogin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { error } = await context.supabase.rpc("activate_first_login");
-    if (error) throw error;
+    if (error) throw new Error(error.message || JSON.stringify(error));
     return { success: true };
   });
