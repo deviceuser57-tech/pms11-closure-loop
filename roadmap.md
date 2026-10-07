@@ -11,3 +11,5 @@
 - [ ] Import preview with row-level validation errors + download rejected/flagged rows
 - [ ] Findings filters: vessel, owner, due date (overdue), status (blocked)
 - [ ] Audit history: owners, due dates, statuses, evidence links on findings
+
+- [ ] PMS11 Copilot (Copilot Studio) integration — plan Rev.0 awaiting approval
