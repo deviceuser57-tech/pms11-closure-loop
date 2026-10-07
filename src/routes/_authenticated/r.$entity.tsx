@@ -123,7 +123,7 @@ function Register() {
       status: "Raised", source_kind: "user", review_status: "Pending", data: { "Change Request": "Created in Changes Register" },
     } as never);
     if (error) return toast.error(error.message);
-    toast.success(`${rid} created`); setForm({ title: "", description: "", owner: "", due_date: "", status: statusValues[0] || "Not Started", criticality: "", applicability: "" }); setShowCreate(false); refetch();
+    toast.success(`${rid} created`); setForm({ title: "", description: "", owner: "", department: "", due_date: "", status: statusValues[0] || "Not Started", criticality: "", applicability: "" }); setShowCreate(false); refetch();
   };
   const guideKey = entity in ENTITY_LABEL ? entity : "closure-loop";  return (
     <div className="space-y-4">
