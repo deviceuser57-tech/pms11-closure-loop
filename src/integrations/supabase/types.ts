@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_reset_events: {
+        Row: {
+          detail: Json
+          id: string
+          reset_at: string
+          reset_by: string
+        }
+        Insert: {
+          detail?: Json
+          id?: string
+          reset_at?: string
+          reset_by: string
+        }
+        Update: {
+          detail?: Json
+          id?: string
+          reset_at?: string
+          reset_by?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string | null
@@ -47,6 +68,80 @@ export type Database = {
           new_status?: string | null
           old_status?: string | null
           rid?: string | null
+        }
+        Relationships: []
+      }
+      department_app_roles: {
+        Row: {
+          department_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          department_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          department_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_app_roles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      department_owner_roles: {
+        Row: {
+          department_id: string
+          owner_role_id: string
+        }
+        Insert: {
+          department_id: string
+          owner_role_id: string
+        }
+        Update: {
+          department_id?: string
+          owner_role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_owner_roles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_owner_roles_owner_role_id_fkey"
+            columns: ["owner_role_id"]
+            isOneToOne: false
+            referencedRelation: "owner_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -112,24 +207,57 @@ export type Database = {
         }
         Relationships: []
       }
+      owner_roles: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          company_id: string | null
           created_at: string
+          department: string | null
           display_name: string | null
           email: string | null
           id: string
+          job_title: string | null
+          must_change_password: boolean
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
+          department?: string | null
           display_name?: string | null
           email?: string | null
           id: string
+          job_title?: string | null
+          must_change_password?: boolean
         }
         Update: {
+          company_id?: string | null
           created_at?: string
+          department?: string | null
           display_name?: string | null
           email?: string | null
           id?: string
+          job_title?: string | null
+          must_change_password?: boolean
         }
         Relationships: []
       }
@@ -142,6 +270,7 @@ export type Database = {
           created_at: string
           criticality: string | null
           data: Json
+          department: string | null
           description: string | null
           doc_number: string | null
           doc_source: string | null
@@ -157,6 +286,7 @@ export type Database = {
           no_go_active: boolean
           owner: string | null
           parent_id: string | null
+          quorum_required: number
           review_status: string
           reviewer: string | null
           revision: string | null
@@ -177,6 +307,7 @@ export type Database = {
           created_at?: string
           criticality?: string | null
           data?: Json
+          department?: string | null
           description?: string | null
           doc_number?: string | null
           doc_source?: string | null
@@ -192,6 +323,7 @@ export type Database = {
           no_go_active?: boolean
           owner?: string | null
           parent_id?: string | null
+          quorum_required?: number
           review_status?: string
           reviewer?: string | null
           revision?: string | null
@@ -212,6 +344,7 @@ export type Database = {
           created_at?: string
           criticality?: string | null
           data?: Json
+          department?: string | null
           description?: string | null
           doc_number?: string | null
           doc_source?: string | null
@@ -227,6 +360,7 @@ export type Database = {
           no_go_active?: boolean
           owner?: string | null
           parent_id?: string | null
+          quorum_required?: number
           review_status?: string
           reviewer?: string | null
           revision?: string | null
@@ -251,6 +385,7 @@ export type Database = {
           record_id: string
           reviewer: string | null
           reviewer_name: string | null
+          stage: string
         }
         Insert: {
           comment?: string | null
@@ -261,6 +396,7 @@ export type Database = {
           record_id: string
           reviewer?: string | null
           reviewer_name?: string | null
+          stage?: string
         }
         Update: {
           comment?: string | null
@@ -271,6 +407,7 @@ export type Database = {
           record_id?: string
           reviewer?: string | null
           reviewer_name?: string | null
+          stage?: string
         }
         Relationships: [
           {
@@ -302,9 +439,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      role_permission_matrix: {
+        Row: {
+          can_edit: boolean | null
+          can_review: boolean | null
+          description: string | null
+          is_admin: boolean | null
+          role: Database["public"]["Enums"]["app_role"] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      activate_first_login: { Args: never; Returns: undefined }
       can_edit: { Args: { _u: string }; Returns: boolean }
       can_review: { Args: { _u: string }; Returns: boolean }
       closure_blockers: { Args: { _id: string }; Returns: string[] }
@@ -312,7 +459,10 @@ export type Database = {
         Args: { r: Database["public"]["Tables"]["records"]["Row"] }
         Returns: string[]
       }
+      current_department: { Args: never; Returns: string }
+      current_user_department: { Args: never; Returns: string }
       expire_evidence: { Args: never; Returns: number }
+      gate_approval_count: { Args: { _record_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -321,6 +471,19 @@ export type Database = {
         Returns: boolean
       }
       is_member: { Args: { _u: string }; Returns: boolean }
+      reset_all_project_records: { Args: never; Returns: Json }
+      set_record_department: {
+        Args: { _department: string; _record_id: string }
+        Returns: undefined
+      }
+      set_user_department: {
+        Args: { _department: string; _user_id: string }
+        Returns: undefined
+      }
+      set_wps_department: {
+        Args: { _department: string; _wps_rid: string }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "admin" | "reviewer" | "contributor" | "viewer"

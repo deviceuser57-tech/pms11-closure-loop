@@ -65,7 +65,7 @@ function validateRows(
     seenIds.add(id);
     seenEmails.add(email);
 
-    const d = governance.deptByName.get(department);
+    const d = governance.deptByName.get(department) as { id: string; name: string } | undefined;
     if (!d) {
       errors.push(`Row ${rowNo}: Department is not present in MASTER_DATA: ${r.Department}`);
       continue;
