@@ -19,19 +19,6 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const buffer = bytes.buffer as ArrayBuffer;
     const parsed = wb.parseWorkbookDetailed(buffer);
     const incoming = parsed.records;
-    const duplicateKeys = new Set<string>();
-    const seenKeys = new Set<string>();
-    for (const record of incoming) {
-      const key = record.entity + ":" + record.rid;
-      if (seenKeys.has(key)) duplicateKeys.add(key);
-      seenKeys.add(key);
-    }
-    if (parsed.unknownSheets.length) {
-      throw new Error("Workbook contains unclassified sheets: " + parsed.unknownSheets.join(", "));
-    }
-    if (duplicateKeys.size) {
-      throw new Error("Workbook contains duplicate entity/record IDs: " + [...duplicateKeys].slice(0, 50).join(", "));
-    }
     const master = wb.parseMasterData(buffer);
     const depLinks = wb.parseDependencyLinks(buffer);
     const relLinks = wb.parseRelationshipLinks(buffer);
@@ -115,6 +102,19 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
     const buffer = bytes.buffer as ArrayBuffer;
     const parsed = wb.parseWorkbookDetailed(buffer);
     const incoming = parsed.records;
+    const duplicateKeys = new Set<string>();
+    const seenKeys = new Set<string>();
+    for (const record of incoming) {
+      const key = record.entity + ":" + record.rid;
+      if (seenKeys.has(key)) duplicateKeys.add(key);
+      seenKeys.add(key);
+    }
+    if (parsed.unknownSheets.length) {
+      throw new Error("Workbook contains unclassified sheets: " + parsed.unknownSheets.join(", "));
+    }
+    if (duplicateKeys.size) {
+      throw new Error("Workbook contains duplicate entity/record IDs: " + [...duplicateKeys].slice(0, 50).join(", "));
+    }
     const master = wb.parseMasterData(buffer);
     const depLinks = wb.parseDependencyLinks(buffer);
     const relLinks = wb.parseRelationshipLinks(buffer);
