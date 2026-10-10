@@ -29,9 +29,9 @@ const ENTITY = {
   Crew_Certificates: ["crew_certificate", "Certificate ID", "Certificate"],
   Manning_Plan: ["manning_plan", "Manning Line ID", "Scenario"],
   Accommodation_Checks: ["accommodation_check", "Accommodation Check ID", "Item"],
-  Accommodation_Capacity: ["accommodation_capacity", "Capacity Plan ID", "Capacity Item"],
+  Accommodation_Capacity: ["accommodation_capacity", "Capacity Plan ID", "Scenario"],
   Helideck_Profile: ["helideck_profile", "Helideck Profile ID", "Operating Scope"],
-  Helideck_Checks: ["helideck_check", "Helideck Check ID", "Check Item"],
+  Helideck_Checks: ["helideck_check", "Helideck Check ID", "Control Item"],
 };
 
 const splitIds = (v) => typeof v === "string" ? v.split(/[;,]/).map(x => x.trim()).filter(Boolean) : [];
