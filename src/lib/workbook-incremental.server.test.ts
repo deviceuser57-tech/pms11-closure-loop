@@ -4,6 +4,7 @@ import * as xlsx from "xlsx";
 import {
   parseDepartmentAssignments,
   parseDependencyLinks,
+  parseMasterData,
   parseRelationshipLinks,
 } from "./workbook-incremental.server";
 import { sheetDisposition } from "./workbook-contract";
@@ -113,11 +114,13 @@ describe("import safety regression guards", () => {
     expect(preview).not.toMatch(/\.rpc\(["'][^"']*(import|write|delete|update)/i);
   });
 
-  it("retains compensating rollback snapshots and checks audit-write errors", () => {
+  it("routes all writes through the transactional database function", () => {
     const source = fs.readFileSync(new URL("./import-incremental.functions.ts", import.meta.url), "utf8");
-    expect(source).toContain("updatedRecordSnapshots.push(old as Record<string, unknown>)");
-    expect(source).toContain("updatedLinkSnapshots.push(previous)");
-    expect(source).toContain("await rollback()");
-    expect(source).toContain("import_runs audit write failed:");
+    const migration = fs.readFileSync(new URL("../../supabase/migrations/20261011133000_pms11_atomic_import.sql", import.meta.url), "utf8");
+    expect(source).toContain('.rpc("apply_pms11_workbook_import"');
+    expect(source).toContain('if (error) throw new Error("Workbook import transaction failed: " + error.message)');
+    expect(migration).toContain("create or replace function public.apply_pms11_workbook_import");
+    expect(migration).toContain("insert into public.import_runs(summary)");
+    expect(migration).toContain("raise exception 'Only Admins can run workbook updates'");
   });
 });
