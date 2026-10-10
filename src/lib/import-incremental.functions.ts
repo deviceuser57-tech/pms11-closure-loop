@@ -122,9 +122,11 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
 
     try {
       // 1. Governance: ADDITIVE only. Never delete existing mappings as a side effect.
-      const { data: departments, error: de } = await context.supabase.from("departments")
-        .upsert(master.departments.map(name=>({name,active:true})),{onConflict:"name",ignoreDuplicates:true}).select("id,name");
+      const { error: de } = await context.supabase.from("departments")
+        .upsert(master.departments.map(name=>({name,active:true})),{onConflict:"name",ignoreDuplicates:true});
       if (de) throw de;
+      const { data: departments, error: departmentsError } = await context.supabase.from("departments").select("id,name");
+      if (departmentsError) throw departmentsError;
       const deptByName = new Map((departments ?? []).map(d=>[d.name.trim(),d.id]));
       for (const name of master.ownerRoles) {
         const { data: created, error:e } = await context.supabase.from("owner_roles")
