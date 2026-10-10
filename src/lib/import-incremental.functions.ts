@@ -22,9 +22,10 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const master = wb.parseMasterData(buffer);
     const depLinks = wb.parseDependencyLinks(buffer);
     const relLinks = wb.parseRelationshipLinks(buffer);
+    const departmentAssignments = wb.parseDepartmentAssignments(buffer);
 
     const { data: existing, error } = await context.supabase
-      .from("records").select("*").eq("source_kind","imported").in("rid", [...new Set(incoming.map(r=>r.rid))]);
+      .from("records").select("*").eq("source_kind","imported");
     if (error) throw error;
     const byKey = new Map((existing ?? []).map((r) => [r.entity + ":" + r.rid, r]));
 
