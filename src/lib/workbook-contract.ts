@@ -19,7 +19,7 @@ export const SHEET_ENTITY: Record<string, string> = {
 
 /** Relationship-register sheets: stored in record_links, NOT duplicated into records. */
 export const RELATIONSHIP_SHEETS = [
-  "Relationships", "Gap_WPS", "RULE_WPS_MAP", "Dependencies",
+  "Relationships", "Gap_WPS", "RULE_WPS_MAP", "Dependencies", "DEPARTMENT_ASSIGNMENTS", "RELATIONSHIP_REGISTER_Rev1",
 ] as const;
 
 /** Governance/reference sheets consumed into governed tables or reference storage. */
@@ -46,7 +46,7 @@ export const DIAGNOSTIC_SHEETS = [
 
 /** Derived/presentation or documentation sheets — no database destination. */
 export const PRESENTATION_SHEETS = [
-  "START_HERE", "MASTER_DATA_GUIDE", "DASHBOARD", "CONFIG", "DATA_DICTIONARY",
+  "START_HERE", "MASTER_DATA_GUIDE", "DASHBOARD", "CONFIG", "DATA_DICTIONARY", "ENTITY_REGISTER",
   "POWERPIVOT_RELATIONS", "POWERPIVOT_STATUS", "POWERPIVOT_GUIDE", "DROPDOWN_MAP",
   "CREW_HELI_ACCOM_DASH", "CREW_HELI_ACCOM_GUIDE", "WORKSTREAM_CONTROL",
   "LISTS", "OPEN_DECISIONS", "VALIDATION_RULES",

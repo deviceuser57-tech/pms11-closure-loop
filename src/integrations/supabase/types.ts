@@ -518,6 +518,33 @@ export type Database = {
           },
         ]
       }
+      workbook_diagnostics: {
+        Row: {
+          id: number
+          imported_at: string
+          payload: Json
+          row_number: number | null
+          run_id: string | null
+          source_sheet: string
+        }
+        Insert: {
+          id?: number
+          imported_at?: string
+          payload: Json
+          row_number?: number | null
+          run_id?: string | null
+          source_sheet: string
+        }
+        Update: {
+          id?: number
+          imported_at?: string
+          payload?: Json
+          row_number?: number | null
+          run_id?: string | null
+          source_sheet?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -577,6 +604,19 @@ export type Database = {
       }
     }
     Functions: {
+      apply_pms11_workbook_import: {
+        Args: {
+          p_departments: Json
+          p_owner_roles: Json
+          p_owner_mappings: Json
+          p_app_role_mappings: Json
+          p_records: Json
+          p_links: Json
+          p_department_assignments: Json
+          p_summary: Json
+        }
+        Returns: Json
+      }
       activate_first_login: { Args: never; Returns: undefined }
       can_edit: { Args: { _u: string }; Returns: boolean }
       can_review: { Args: { _u: string }; Returns: boolean }

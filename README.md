@@ -55,17 +55,17 @@ npm run dev
 
 ## PMS-11 source-driven workbook workflow
 
-The authoritative operational source is `PMS11_POWERPIVOT_READY.xlsx`. The workbook is model-ready and its `LISTS` / `MASTER_DATA` vocabulary is the source for governed dropdowns; it is not replaced by hand-edited JSON. The workbook documentation explicitly distinguishes a model-ready XLSX from an already-built Power Pivot model and requires Windows Excel/VBA setup for the live model. 
+The authoritative operational source is `PMS11_MASTER_DATA_Rev.2.xlsx` (56 worksheets). `MASTER_DATA` and `LISTS` remain governed vocabulary sources. The import contract explicitly classifies operational sheets, typed relationship registers, governance/reference sheets, diagnostics, and presentation sheets. `Relationships` is the broad explicit relationship source. `RELATIONSHIP_REGISTER_Rev1` contributes only validated supplemental multi-value edges; its explicit mirror rows and broken-reference rows are skipped, and endpoint/type deduplication prevents duplicate edge ingestion. `DEPARTMENT_ASSIGNMENTS`, `Gap_WPS`, `RULE_WPS_MAP`, and `Dependencies` are parsed as typed relationship/assignment sources. The workbook is not an already-built Power Pivot model; live Excel/VBA setup must be separately verified. 
 
 Before local verification, place the workbook at any accessible path and generate the application seed:
 
 ```sh
-npm run pms11:seed -- "D:\conversation-files\deliverables\PMS11_POWERPIVOT_READY.xlsx"
-npm run pms11:verify-source -- "D:\conversation-files\deliverables\PMS11_POWERPIVOT_READY.xlsx"
+npm run pms11:seed -- "D:\conversation-files\deliverables\PMS11_MASTER_DATA_Rev.2.xlsx"
+npm run pms11:verify-source -- "D:\conversation-files\deliverables\PMS11_MASTER_DATA_Rev.2.xlsx"
 npm test
 npm run build
 ```
 
-The generator preserves source rows in `data`, maps only fields supported by the application schema, and does not fabricate missing IDs, dates, owners, approvals, or relationships. Multi-value source fields remain arrays/raw snapshots. The generated `src/lib/seed/pms11-workbook.json` is the bridge from the workbook into the full-stack Supabase import path.
+The generator preserves source rows in `data`, maps supported core and Crew/Accommodation/Helideck workstream fields, and does not fabricate missing IDs, dates, owners, approvals, or relationships. Directional dependencies and normalized relationship links are parsed separately by the live import path; predecessor/successor arrays are not collapsed into undirected sequence links. The generated `src/lib/seed/pms11-workbook.json` is a seed snapshot, not a substitute for the live import relationship pipeline. Preview is read-only. The approved import executes through one PostgreSQL RPC transaction, so any database error rolls back governance, records, relationships, department assignments, and the audit row together.
 
 Power Pivot remains a separate Excel concern: `POWERPIVOT_SETUP.txt`, `PowerPivotSetup.bas`, `POWERPIVOT_RELATIONSHIP_PLAN.csv`, and `POWERPIVOT_STATUS` define and verify the live Excel Data Model. The repository must not claim that Power Pivot or VBA has executed unless the local Windows Excel verification actually passes.

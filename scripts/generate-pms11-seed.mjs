@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import xlsx from "xlsx";
 
-const input = process.argv[2] || "PMS11_POWERPIVOT_READY.xlsx";
+const input = process.argv[2] || "PMS11_MASTER_DATA_Rev.2.xlsx";
 const output = process.argv[3] || "src/lib/seed/pms11-workbook.json";
 const listsOutput = process.argv[4] || "src/lib/seed/setup-lists.json";
 const wb = xlsx.readFile(path.resolve(input), { cellDates: true, raw: true });
@@ -20,6 +20,18 @@ const ENTITY = {
   Responsibilities: ["responsibility", "Responsibility Record ID", "Owner"],
   Risks: ["risk", "Record ID", "Description"],
   Changes: ["change", "Change ID", "Change Description"],
+  Execution: ["execution", "Execution ID", "Activity / Task Title"],
+  Functional: ["functional", "Functional_Activity_ID", "Detailed_Activity_Desc"],
+  Sources: ["source", "Source Record ID", "Document Title"],
+  Crew_Roles: ["crew_role", "Role ID", "Role / Team"],
+  Crew_Requirements: ["crew_requirement", "Requirement ID", "Certificate Type"],
+  Crew_Register: ["crew_register", "Crew ID", "Name"],
+  Crew_Certificates: ["crew_certificate", "Certificate ID", "Certificate Type"],
+  Manning_Plan: ["manning_plan", "Manning Line ID", "Scenario"],
+  Accommodation_Checks: ["accommodation_check", "Accommodation Check ID", "Item"],
+  Accommodation_Capacity: ["accommodation_capacity", "Capacity Plan ID", "Scenario"],
+  Helideck_Profile: ["helideck_profile", "Helideck Profile ID", "Operating Scope"],
+  Helideck_Checks: ["helideck_check", "Helideck Check ID", "Control Item"],
 };
 
 const splitIds = (v) => typeof v === "string" ? v.split(/[;,]/).map(x => x.trim()).filter(Boolean) : [];
@@ -84,6 +96,33 @@ for (const [sheet, [entity, idKey, titleKey]] of Object.entries(ENTITY)) {
       put("status", scalar(raw,"Status")); put("criticality", scalar(raw,"Risk Level")); put("owner", scalar(raw,"Owner")); put("reviewer", scalar(raw,"Decision Authority"));
     } else if (entity === "change") {
       put("status", scalar(raw,"Status")); put("owner", scalar(raw,"Raised By"));
+    } else if (entity === "execution") {
+      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Status")); put("owner", scalar(raw,"Discipline Lead"));
+      put("approver", scalar(raw,"Accountable Manager")); put("due_date", scalar(raw,"Planned Finish"));
+      put("criticality", scalar(raw,"Risk Level")); put("gate_id", scalar(raw,"Blocking Gate"));
+      put("evidence_ids", arr(raw,"Evidence Required"));
+    } else if (entity === "functional") {
+      put("wps_id", scalar(raw,"WPS_ID")); put("criticality", scalar(raw,"Risk_Level"));
+      put("gate_id", scalar(raw,"Readiness_Gate")); put("rule_ids", arr(raw,"Governing_Rule_Ref"));
+      put("acceptance_ids", arr(raw,"Canonical_Acceptance_Criteria_ID"));
+    } else if (entity === "source") {
+      put("status", scalar(raw,"Status")); put("issuer", scalar(raw,"Authority")); put("doc_number", scalar(raw,"Document Number"));
+      put("revision", scalar(raw,"Edition")); put("doc_source", scalar(raw,"URL")); put("rule_ids", arr(raw,"Related Rule IDs"));
+    } else if (entity === "crew_register") {
+      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Deployment Approval") ?? scalar(raw,"Credential Status"));
+      put("evidence_ids", arr(raw,"Evidence ID"));
+    } else if (entity === "crew_certificate") {
+      put("status", scalar(raw,"Verification Status") ?? scalar(raw,"Credential Result"));
+      put("expiry_date", scalar(raw,"Expiry Date")); put("issuer", scalar(raw,"Issuer")); put("doc_number", scalar(raw,"Certificate Number"));
+    } else if (entity.startsWith("crew_") || entity === "manning_plan") {
+      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Approval Status") ?? scalar(raw,"Applicability"));
+      put("rule_ids", arr(raw,"Source Rule ID")); put("evidence_ids", arr(raw,"Evidence ID"));
+    } else if (entity.startsWith("accommodation_")) {
+      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Approval Status") ?? scalar(raw,"Capacity Result") ?? scalar(raw,"Inspection Status") ?? scalar(raw,"Control Result"));
+      put("rule_ids", arr(raw,"Source Rule ID")); put("evidence_ids", arr(raw,"Evidence ID"));
+    } else if (entity.startsWith("helideck_")) {
+      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Installed Status") ?? scalar(raw,"Verification Status") ?? scalar(raw,"Check Status"));
+      put("evidence_ids", [...arr(raw,"Permissions / Certificate Evidence"), ...arr(raw,"Evidence ID")]);
     }
     records.push(rec);
   }

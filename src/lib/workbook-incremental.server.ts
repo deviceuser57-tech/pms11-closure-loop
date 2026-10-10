@@ -1,6 +1,6 @@
 import * as xlsx from "xlsx";
 import {
-  SHEET_ENTITY, WORKSTREAM_SHEETS, OPERATIONAL_EXTRA_SHEETS, isValidApplicationRole, parseRefs,
+  SHEET_ENTITY, WORKSTREAM_SHEETS, OPERATIONAL_EXTRA_SHEETS, isValidApplicationRole, parseRefs, sheetDisposition,
 } from "./workbook-contract";
 
 export type WorkbookRecord = {
@@ -24,6 +24,7 @@ export type WorkbookRecord = {
   rule_ids?: string[];
   links?: string[];
   doc_number?: string;
+  doc_source?: string;
   revision?: string;
   issuer?: string;
   department?: string;
@@ -47,17 +48,17 @@ const ENTITY: Record<string, [string,string,string]> = {
   Risks: ["risk","Record ID","Description"],
   Changes: ["change","Change ID","Change Description"],
   Execution: ["execution","Execution ID","Activity / Task Title"],
-  Functional: ["functional","Functional_Activity_ID","Functional Activity / Description"],
+  Functional: ["functional","Functional_Activity_ID","Detailed_Activity_Desc"],
   Sources: ["source","Source Record ID","Document Title"],
   Crew_Roles: ["crew_role","Role ID","Role / Team"],
-  Crew_Requirements: ["crew_requirement","Requirement ID","Requirement"],
-  Crew_Register: ["crew_register","Crew ID","Name / Role"],
-  Crew_Certificates: ["crew_certificate","Certificate ID","Certificate"],
+  Crew_Requirements: ["crew_requirement","Requirement ID","Certificate Type"],
+  Crew_Register: ["crew_register","Crew ID","Name"],
+  Crew_Certificates: ["crew_certificate","Certificate ID","Certificate Type"],
   Manning_Plan: ["manning_plan","Manning Line ID","Scenario"],
   Accommodation_Checks: ["accommodation_check","Accommodation Check ID","Item"],
-  Accommodation_Capacity: ["accommodation_capacity","Capacity ID","Capacity Item"],
+  Accommodation_Capacity: ["accommodation_capacity","Capacity Plan ID","Scenario"],
   Helideck_Profile: ["helideck_profile","Helideck Profile ID","Operating Scope"],
-  Helideck_Checks: ["helideck_check","Helideck Check ID","Check Item"],
+  Helideck_Checks: ["helideck_check","Helideck Check ID","Control Item"],
 };
 
 const splitIds = (v: unknown) =>
@@ -66,7 +67,7 @@ const splitIds = (v: unknown) =>
 /** Reference columns expanded into record_links (never stored as scalar FKs). */
 export type WorkbookLink = {
   source_entity: string; source_rid: string; target_entity: string; target_rid: string;
-  link_type: string; role?: string; lag_days?: number | null; status?: string | null;
+  link_type: string; role?: string | null; lag_days?: number | null; status?: string | null;
   source_sheet: string; source_field: string; notes?: string | null; ambiguous?: boolean;
 };
 
@@ -91,7 +92,8 @@ function collectLinks(rec: WorkbookRecord): WorkbookLink[] {
   if (rec.wps_id) push("wps", rec.wps_id, "BELONGS_TO_WPS", "WPS ID");
   if (rec.gate_id) push("gate", rec.gate_id, "BLOCKS_GATE", "Readiness Gate");
   if (rec.parent_id) push("", rec.parent_id, "PARENT_OF", "parent");
-  for (const id of rec.links ?? []) push("", id, "SEQUENCE_LINK", "dependencies");
+  // Predecessor and successor arrays are directional and are parsed from the canonical Dependencies sheet.
+  // Do not collapse them into ambiguous undirected links here.
   return links;
 }
 
@@ -115,6 +117,7 @@ export type ParseResult = {
   ambiguousRefs: Array<{ sheet: string; rid: string; field: string; value: string }>;
   /** Sheets present in the workbook but with no contract disposition. */
   unknownSheets: string[];
+  relationshipRegister: { rows: number; brokenReferences: number };
 };
 
 export function parseWorkbookDetailed(buffer: ArrayBuffer): ParseResult {
@@ -207,19 +210,27 @@ export function parseWorkbookDetailed(buffer: ArrayBuffer): ParseResult {
         put("rule_ids",[]); put("evidence_ids",arrT("Evidence Required","evidence"));
         put("links",[...arrT("Logical Predecessor IDs","execution"),...arrT("Schedule Predecessor IDs","execution")]);
       } else if (entity === "functional") {
-        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Status")); put("criticality",scalar(raw,"Risk_Level"));
-        put("rule_ids",arrT("Source Rule ID","rule")); put("evidence_ids",arrT("Evidence ID","evidence"));
+        put("wps_id",scalar(raw,"WPS_ID")); put("criticality",scalar(raw,"Risk_Level"));
+        put("gate_id",scalar(raw,"Readiness_Gate"));
+        put("rule_ids",arrT("Governing_Rule_Ref","rule"));
+        put("acceptance_ids",arrT("Canonical_Acceptance_Criteria_ID","acceptance"));
       } else if (entity === "source") {
         put("status",scalar(raw,"Status")); put("issuer",scalar(raw,"Authority")); put("doc_number",scalar(raw,"Document Number")); put("revision",scalar(raw,"Edition")); put("doc_source",scalar(raw,"URL"));
         put("rule_ids",arrT("Related Rule IDs","rule"));
+      } else if (entity === "crew_register") {
+        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Deployment Approval") ?? scalar(raw,"Credential Status"));
+        put("evidence_ids",arrT("Evidence ID","evidence"));
+      } else if (entity === "crew_certificate") {
+        put("status",scalar(raw,"Verification Status") ?? scalar(raw,"Credential Result"));
+        put("expiry_date",scalar(raw,"Expiry Date")); put("issuer",scalar(raw,"Issuer")); put("doc_number",scalar(raw,"Certificate Number"));
       } else if (entity.startsWith("crew_") || entity === "manning_plan") {
         put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Approval Status") ?? scalar(raw,"Applicability"));
         put("rule_ids",arrT("Source Rule ID","rule")); put("evidence_ids",arrT("Evidence ID","evidence"));
       } else if (entity.startsWith("accommodation_")) {
-        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Inspection Status") ?? scalar(raw,"Control Result"));
+        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Approval Status") ?? scalar(raw,"Capacity Result") ?? scalar(raw,"Inspection Status") ?? scalar(raw,"Control Result"));
         put("rule_ids",arrT("Source Rule ID","rule")); put("evidence_ids",arrT("Evidence ID","evidence"));
       } else if (entity.startsWith("helideck_")) {
-        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Installed Status") ?? scalar(raw,"Check Status"));
+        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Installed Status") ?? scalar(raw,"Verification Status") ?? scalar(raw,"Check Status"));
         put("evidence_ids",arrT("Permissions / Certificate Evidence","evidence").concat(arrT("Evidence ID","evidence")));
       }
       records.push(rec);
@@ -227,26 +238,67 @@ export function parseWorkbookDetailed(buffer: ArrayBuffer): ParseResult {
   }
 
   const links = records.flatMap(collectLinks);
-  const unknownSheets = wb.SheetNames.filter((n) => !ENTITY[n] && !KNOWN_NON_INGEST.has(n));
-  return { records, links, ambiguousRefs, unknownSheets };
+  const unknownSheets = wb.SheetNames.filter((n) => sheetDisposition(n) === "unknown");
+  const relationshipRegisterRows = wb.Sheets["RELATIONSHIP_REGISTER_Rev1"]
+    ? xlsx.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets["RELATIONSHIP_REGISTER_Rev1"], { defval: null, raw: true })
+    : [];
+  const relationshipRegister = {
+    rows: relationshipRegisterRows.length,
+    brokenReferences: relationshipRegisterRows.filter(r => String(r["Validation Status"] ?? "").trim().toUpperCase() === "BROKEN_REFERENCE").length,
+  };
+  return { records, links, ambiguousRefs, unknownSheets, relationshipRegister };
 }
 
-const KNOWN_NON_INGEST = new Set([
-  "MASTER_DATA","Relationships","Gap_WPS","RULE_WPS_MAP","Dependencies","LISTS","Department_Summary",
-  "MIGRATION_ISSUES","REDTEAM_RESULTS","REDTEAM_HISTORY","DATA_DICTIONARY","POWERPIVOT_RELATIONS",
-  "POWERPIVOT_STATUS","POWERPIVOT_GUIDE","START_HERE","DASHBOARD","CONFIG","DROPDOWN_MAP",
-  "MASTER_DATA_GUIDE","MASTER_DATA_REVIEW","OPEN_FIRST","WORKSTREAM_CONTROL","CREW_HELI_ACCOM_DASH",
-  "CREW_HELI_ACCOM_GUIDE","WORKSTREAM_REDTEAM","MASTER_DATA_AUDIT","OPEN_DECISIONS","VALIDATION_RULES",
-  "RELATIONSHIP_REGISTER_Rev1","ENTITY_REGISTER",
-  // Rev.1 report mirrors — diagnostic only
-  "Master_Departments","Master_Owner_Roles","Master_Application_Roles","Dept_Owner_Map","Dept_Application_Role_Map",
-  "MASTER_DATA_CHANGE_REPORT","RELATIONSHIP_REPAIR_REPORT","UNRESOLVED_REFERENCE_REPORT","OWNERSHIP_REPORT",
-  "APPLICATION_ROLE_REPORT","CREW_HELIDECK_ACCOM_REPORT","POWERPIVOT_READINESS_REPORT","QA_SUMMARY","README_REV1",
-]);
+
 
 /** Back-compatible wrapper used by existing callers. */
 export function parseWorkbook(buffer: ArrayBuffer): WorkbookRecord[] {
   return parseWorkbookDetailed(buffer).records;
+}
+
+/** Canonical department assignments from the workbook's explicit assignment register. */
+export type WorkbookDepartmentAssignment = {
+  entity: string;
+  rid: string;
+  department: string;
+  source_sheet: "DEPARTMENT_ASSIGNMENTS";
+  source_field: string;
+  source_value: string | null;
+  assignment_method: string | null;
+  status: string | null;
+  open_decision: string | null;
+};
+
+export function parseDepartmentAssignments(buffer: ArrayBuffer): WorkbookDepartmentAssignment[] {
+  const wb = xlsx.read(new Uint8Array(buffer), { cellDates: true, raw: true });
+  const sheet = wb.Sheets["DEPARTMENT_ASSIGNMENTS"];
+  if (!sheet) return [];
+  const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true });
+  const canonicalEntity = (value: unknown): string => {
+    const raw = typeof value === "string" ? value.trim() : "";
+    if (!raw) return "";
+    if (SHEET_ENTITY[raw]) return SHEET_ENTITY[raw];
+    if (Object.values(SHEET_ENTITY).includes(raw.toLowerCase())) return raw.toLowerCase();
+    if (WORKSTREAM_SHEETS[raw]) return WORKSTREAM_SHEETS[raw];
+    if (OPERATIONAL_EXTRA_SHEETS[raw]) return OPERATIONAL_EXTRA_SHEETS[raw];
+    const normalized = raw.toLowerCase().replace(/[\s-]+/g, "_");
+    return Object.values(WORKSTREAM_SHEETS).includes(normalized) ||
+      Object.values(OPERATIONAL_EXTRA_SHEETS).includes(normalized) ? normalized : "";
+  };
+  return rows.flatMap((row) => {
+    const entity = canonicalEntity(row["Entity"]);
+    const rid = String(row["Record ID"] ?? "").trim();
+    const department = String(row["Primary Department"] ?? "").trim();
+    if (!entity || !rid || !department) return [];
+    return [{
+      entity, rid, department, source_sheet: "DEPARTMENT_ASSIGNMENTS" as const,
+      source_field: String(row["Assignment Source Field"] ?? "").trim(),
+      source_value: row["Assignment Source Value"] == null ? null : String(row["Assignment Source Value"]),
+      assignment_method: row["Assignment Method"] == null ? null : String(row["Assignment Method"]),
+      status: row["Status"] == null ? null : String(row["Status"]),
+      open_decision: row["Open Decision"] == null ? null : String(row["Open Decision"]),
+    }];
+  });
 }
 
 /** Dependencies sheet → explicit DEPENDS_ON links (first-class dependency source). */
@@ -260,13 +312,15 @@ export function parseDependencyLinks(buffer: ArrayBuffer): WorkbookLink[] {
     const pred = typeof r["Predecessor ID"] === "string" ? (r["Predecessor ID"] as string).trim() : "";
     const succ = typeof r["Successor ID"] === "string" ? (r["Successor ID"] as string).trim() : "";
     if (!pred || !succ) continue;
+    const relationship = typeof r["Relationship"] === "string" ? r["Relationship"].trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "") : "";
     out.push({
-      source_entity: "dependency", source_rid: String(r["Link ID"] ?? pred + "->" + succ),
-      target_entity: "", target_rid: succ, link_type: "DEPENDS_ON",
+      source_entity: inferEntityFromId(pred), source_rid: pred,
+      target_entity: inferEntityFromId(succ), target_rid: succ,
+      link_type: relationship || "DEPENDS_ON",
       lag_days: typeof r["Lag Days"] === "number" ? r["Lag Days"] : null,
       status: typeof r["Validation Status"] === "string" ? r["Validation Status"] : null,
       notes: typeof r["Rationale"] === "string" ? r["Rationale"] : null,
-      source_sheet: "Dependencies", source_field: `Predecessor ${pred} (${String(r["Relationship"] ?? "")})`,
+      source_sheet: "Dependencies", source_field: String(r["Link ID"] ?? "Predecessor ID/Successor ID"),
     });
   }
   return out;
@@ -275,18 +329,101 @@ export function parseDependencyLinks(buffer: ArrayBuffer): WorkbookLink[] {
 /** Relationships register → canonical record_links (authoritative M:N source). */
 export function parseRelationshipLinks(buffer: ArrayBuffer): WorkbookLink[] {
   const wb = xlsx.read(new Uint8Array(buffer), { cellDates: true, raw: true });
-  const sheet = wb.Sheets["Relationships"];
-  if (!sheet) return [];
-  const rows = xlsx.utils.sheet_to_json<Record<string,unknown>>(sheet, { defval: null, raw: true });
   const norm = (v: unknown) => typeof v === "string" ? v.trim() : "";
-  const entityKey = (name: string) => SHEET_ENTITY[name] ?? WORKSTREAM_SHEETS[name] ?? OPERATIONAL_EXTRA_SHEETS[name] ?? name.toLowerCase();
-  return rows.filter((r) => norm(r["Parent ID"]) && norm(r["Child ID"])).map((r) => ({
-    source_entity: entityKey(norm(r["Parent Entity"])), source_rid: norm(r["Parent ID"]),
-    target_entity: entityKey(norm(r["Child Entity"])), target_rid: norm(r["Child ID"]),
-    link_type: "REGISTERED", role: null,
-    source_sheet: "Relationships", source_field: norm(r["Source Field"]),
-  }));
+  const entityKey = (name: string) => SHEET_ENTITY[name] ?? WORKSTREAM_SHEETS[name] ?? OPERATIONAL_EXTRA_SHEETS[name] ?? "";
+  const out: WorkbookLink[] = [];
+
+  // Relationships is the canonical broad register. The Rev.1 register contributes
+  // only valid supplemental multi-value edges; its explicit mirror rows are skipped.
+  const relationships = wb.Sheets["Relationships"];
+  if (relationships) {
+    const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(relationships, { defval: null, raw: true });
+    for (const r of rows) {
+      const parentId = norm(r["Parent ID"]);
+      const childId = norm(r["Child ID"]);
+      if (!parentId || !childId) continue;
+      out.push({
+        source_entity: entityKey(norm(r["Parent Entity"])), source_rid: parentId,
+        target_entity: entityKey(norm(r["Child Entity"])), target_rid: childId,
+        link_type: "REGISTERED", source_sheet: "Relationships",
+        source_field: norm(r["Source Field"]),
+      });
+    }
+  }
+
+  // These two registers carry semantics not represented by the broad register.
+  // They are imported as typed edges; generic REGISTERED duplicates are removed
+  // during link normalization before persistence.
+  const gapWps = wb.Sheets["Gap_WPS"];
+  if (gapWps) {
+    const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(gapWps, { defval: null, raw: true });
+    for (const r of rows) {
+      const gapId = norm(r["Gap ID"]), wpsId = norm(r["WPS ID"]);
+      if (!gapId || !wpsId) continue;
+      out.push({
+        source_entity: "gap", source_rid: gapId, target_entity: "wps", target_rid: wpsId,
+        link_type: "RELATED_TO_WPS", source_sheet: "Gap_WPS", source_field: "WPS ID",
+        status: norm(r["Critical Open"]) || norm(r["Gap Open"]) || null,
+      });
+    }
+  }
+
+  const ruleWps = wb.Sheets["RULE_WPS_MAP"];
+  if (ruleWps) {
+    const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(ruleWps, { defval: null, raw: true });
+    for (const r of rows) {
+      const ruleId = norm(r["Rule ID"]), wpsId = norm(r["WPS ID"]);
+      if (!ruleId || !wpsId) continue;
+      const mapping = norm(r["Mapping Type"]).toLowerCase();
+      const role = mapping.includes("supporting") ? "supporting" : mapping.includes("primary") ? "primary" : null;
+      out.push({
+        source_entity: "rule", source_rid: ruleId, target_entity: "wps", target_rid: wpsId,
+        link_type: "APPLIES_TO_WPS", role, source_sheet: "RULE_WPS_MAP",
+        source_field: norm(r["Mapping ID"]) || "Rule ID/WPS ID",
+        status: norm(r["Approval Status"]) || null, notes: norm(r["Comments"]) || mapping || null,
+      });
+    }
+  }
+  const register = wb.Sheets["RELATIONSHIP_REGISTER_Rev1"];
+  if (register) {
+    const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(register, { defval: null, raw: true });
+    for (const r of rows) {
+      const relationshipType = norm(r["Relationship Type"]).toLowerCase();
+      const validationStatus = norm(r["Validation Status"]).toUpperCase();
+      if (!relationshipType.includes("derived from multi-value/source field") || validationStatus !== "OK") continue;
+      const sourceEntity = entityKey(norm(r["Parent Entity"]));
+      const targetEntity = entityKey(norm(r["Child Entity"]));
+      const sourceRid = norm(r["Parent ID"]);
+      const targetRid = norm(r["Child ID"]);
+      if (!sourceEntity || !targetEntity || !sourceRid || !targetRid) continue;
+      const sourceValue = norm(r["Source Value"]);
+      const issue = norm(r["Issue"]);
+      out.push({
+        source_entity: sourceEntity, source_rid: sourceRid,
+        target_entity: targetEntity, target_rid: targetRid,
+        link_type: "DERIVED_FROM_SOURCE_FIELD",
+        source_sheet: "RELATIONSHIP_REGISTER_Rev1",
+        source_field: norm(r["Source Field"]) || norm(r["Relationship ID"]),
+        status: validationStatus,
+        notes: [sourceValue, issue].filter(Boolean).join(" | ") || null,
+      });
+    }
+  }
+  return out;
 }
+
+const inferEntityFromId = (rid: string): string => {
+  if (/^WPS[-_]/i.test(rid)) return "wps";
+  if (/^GATE[-_]/i.test(rid)) return "gate";
+  if (/^ACT[-_]/i.test(rid) || /^A[-_]/i.test(rid)) return "activity";
+  if (/^DEL[-_]/i.test(rid)) return "deliverable";
+  if (/^TASK[-_]/i.test(rid) || /^T[-_]/i.test(rid)) return "task";
+  if (/^GAP[-_]/i.test(rid) || /^G[-_]/i.test(rid)) return "gap";
+  if (/^AC[-_]/i.test(rid)) return "acceptance";
+  if (/^E[-_]/i.test(rid)) return "evidence";
+  if (/^R[-_]/i.test(rid)) return "rule";
+  return "";
+};
 
 export function toDbRecord(r: WorkbookRecord) {
   return {
@@ -296,7 +433,7 @@ export function toDbRecord(r: WorkbookRecord) {
     expiry_date:r.expiry_date ?? null, criticality:r.criticality ?? null, source_kind:"imported",
     applicability:r.applicability ?? null, evidence_ids:r.evidence_ids ?? [], acceptance_ids:r.acceptance_ids ?? [],
     rule_ids:r.rule_ids ?? [], links:r.links ?? [], doc_number:r.doc_number ?? null, revision:r.revision ?? null,
-    issuer:r.issuer ?? null, department:r.department ?? null, data:r.data ?? {},
+    issuer:r.issuer ?? null, doc_source:r.doc_source ?? null, department:r.department ?? null, data:r.data ?? {},
   };
 }
 
@@ -305,9 +442,9 @@ export type MasterData = { departments:string[]; ownerRoles:string[]; mappings:A
 /**
  * MASTER_DATA is a wide governed-lists sheet (one column per controlled list),
  * NOT one row per department. Departments/Owner roles are the distinct non-empty
- * values of their columns; every other column becomes a controlled list.
- * Application-role mappings exist only if an explicit valid role column is present —
- * never inferred from operational roles.
+ * values of their columns; unrelated vocabulary columns become controlled lists.
+ * Owner mappings come only from explicit Rev.1 mapping columns, and application-role
+ * mappings require a valid explicit app-role value — never inferred from owner roles.
  */
 export function parseMasterData(buffer: ArrayBuffer): MasterData {
   const wb = xlsx.read(new Uint8Array(buffer), { cellDates:true, raw:true });
@@ -322,43 +459,57 @@ export function parseMasterData(buffer: ArrayBuffer): MasterData {
 
   const ownerKey=findKey(["Owners and Roles","Owner Role"],17);
   const deptKey=findKey(["Departments","Department"],18);
-  const appRoleKey=findKey(["Application Role","App Role","User Role","System Role"]);
-
+  const mappingDeptKey=findKey(["Rev.1 Department"]);
+  const mappingOwnerKey=findKey(["Rev.1 Operational Owner Role"]);
+  const appRoleKey=findKey(["Rev.1 Application Role","Application Role","App Role","User Role","System Role"]);
+  const mappingStatusKey=findKey(["Rev.1 Status"]);
+  const appRoleStatusKey=findKey(["Rev.1 Status_1"]);
   const colValues = (k?: string) =>
     k ? [...new Set(rows.map(r=>String(r[k] ?? "").trim()).filter(Boolean))] : [];
+  const isPlaceholder = (value: string) => /^(OPEN DECISION|TO BE ASSIGNED|TBC|TBD)$/i.test(value.trim());
 
-  const departments=colValues(deptKey);
-  const ownerRoles=colValues(ownerKey);
+  // The wide MASTER_DATA columns are independent lists. Never zip owner and
+  // department list rows to invent mappings; mappings come only from explicit
+  // Rev.1 mapping columns.
+  const departments = colValues(deptKey).filter(value => !isPlaceholder(value));
+  const ownerRoles = colValues(ownerKey).filter(value => !isPlaceholder(value));
+  const departmentSet = new Set(departments);
+  const ownerRoleSet = new Set(ownerRoles);
+  const mappingPairs = rows.flatMap(r => {
+    const department = String(mappingDeptKey ? r[mappingDeptKey] ?? "" : "").trim();
+    const ownerRole = String(mappingOwnerKey ? r[mappingOwnerKey] ?? "" : "").trim();
+    const status = String(mappingStatusKey ? r[mappingStatusKey] ?? "" : "").trim();
+    const valid = departmentSet.has(department) && ownerRoleSet.has(ownerRole) &&
+      !isPlaceholder(department) && !isPlaceholder(ownerRole) &&
+      (!status || status.toUpperCase() === "DERIVED_FROM_MASTER_DATA");
+    return valid ? [{department, ownerRole}] : [];
+  });
+  const mappings = [...new Map(mappingPairs.map(m => [m.department + "\u0000" + m.ownerRole, m])).values()];
 
-  const mappings=[...new Map(rows.map(r=>{
-    const d=String(deptKey ? r[deptKey] ?? "" : "").trim();
-    const o=String(ownerKey ? r[ownerKey] ?? "" : "").trim();
-    return [d+"\u0000"+o,{department:d,ownerRole:o}] as const;
-  }).filter(([,v])=>v.department&&v.ownerRole))].map(([,v])=>v);
-
-  // Controlled lists: every remaining column is a governed value list.
-  const skip = new Set([deptKey, ownerKey, appRoleKey].filter(Boolean) as string[]);
+  // Controlled lists are retained independently of governance entities. The
+  // Rev.1 mapping columns are not dropdown vocabularies and are not re-read as lists.
+  const skip = new Set([deptKey, ownerKey, mappingDeptKey, mappingOwnerKey, appRoleKey, mappingStatusKey, appRoleStatusKey].filter(Boolean) as string[]);
   const controlledLists: Record<string,string[]> = {};
   for (const k of keys) {
-    if (skip.has(k)) continue;
+    if (skip.has(k) || k.trim().startsWith("Rev.1 ")) continue;
     const vals = colValues(k);
     if (vals.length && vals.length <= 60) controlledLists[k.trim()] = vals;
   }
 
-  // Explicit application-role column only; validated against canonical roles.
   const appRoleMappings: MasterData["appRoleMappings"] = [];
-  if (appRoleKey) {
+  if (mappingDeptKey && appRoleKey) {
     const seen = new Set<string>();
     for (const r of rows) {
-      const d=String(deptKey ? r[deptKey] ?? "" : "").trim();
-      const role=String(r[appRoleKey] ?? "").trim().toLowerCase();
-      if (d && isValidApplicationRole(role) && !seen.has(d+role)) {
-        seen.add(d+role);
-        appRoleMappings.push({department:d, appRole:role});
+      const department = String(r[mappingDeptKey] ?? "").trim();
+      const role = String(r[appRoleKey] ?? "").trim().toLowerCase();
+      const status = String(appRoleStatusKey ? r[appRoleStatusKey] ?? "" : "").trim().toUpperCase();
+      if (departmentSet.has(department) && isValidApplicationRole(role) &&
+          (!status || status === "DERIVED_FROM_MASTER_DATA") && !seen.has(department + ":" + role)) {
+        seen.add(department + ":" + role);
+        appRoleMappings.push({department, appRole:role});
       }
     }
   }
-
   return {departments,ownerRoles,mappings,appRoleMappings,controlledLists};
 }
 export function fingerprint(r: unknown): string {
