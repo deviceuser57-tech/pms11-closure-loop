@@ -154,7 +154,8 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
         ownerRoles: master.ownerRoles.length,
         ownerMappings: master.mappings.length,
         applicationRoleMappings: master.appRoleMappings.length,
-        controlledLists: Object.keys(master.controlledLists).length,
+        controlledListCount: Object.keys(master.controlledLists).length,
+        controlledLists: master.controlledLists,
       },
       relationships: {
         derived: parsed.links.length,
