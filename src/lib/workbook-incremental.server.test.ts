@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import fs from "node:fs";
 import * as xlsx from "xlsx";
 import {
   parseDepartmentAssignments,
@@ -97,5 +98,26 @@ describe("PMS11 Rev.2 workbook contract", () => {
         source_value:"Engineer", assignment_method:"Explicit", status:"Confirmed", open_decision:"",
       },
     ]);
+  });
+});
+
+describe("import safety regression guards", () => {
+  it("keeps workbook preview free of database mutation calls", () => {
+    const source = fs.readFileSync(new URL("./import-incremental.functions.ts", import.meta.url), "utf8");
+    const previewStart = source.indexOf("export const previewWorkbookIncremental");
+    const importStart = source.indexOf("export const runWorkbookIncremental");
+    expect(previewStart).toBeGreaterThanOrEqual(0);
+    expect(importStart).toBeGreaterThan(previewStart);
+    const preview = source.slice(previewStart, importStart);
+    expect(preview).not.toMatch(/\.from\([^)]*\)\.(insert|update|delete|upsert)\s*\(/);
+    expect(preview).not.toMatch(/\.rpc\(["'][^"']*(import|write|delete|update)/i);
+  });
+
+  it("retains compensating rollback snapshots and checks audit-write errors", () => {
+    const source = fs.readFileSync(new URL("./import-incremental.functions.ts", import.meta.url), "utf8");
+    expect(source).toContain("updatedRecordSnapshots.push(old as Record<string, unknown>)");
+    expect(source).toContain("updatedLinkSnapshots.push(previous)");
+    expect(source).toContain("await rollback()");
+    expect(source).toContain("import_runs audit write failed:");
   });
 });
