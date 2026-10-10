@@ -33,7 +33,7 @@ describe("PMS11 Rev.2 workbook contract", () => {
     expect(sheets).toHaveLength(56);
     expect(sheets.filter((sheet) => sheetDisposition(sheet) === "unknown")).toEqual([]);
     expect(sheetDisposition("DEPARTMENT_ASSIGNMENTS")).toBe("relationship");
-    expect(sheetDisposition("RELATIONSHIP_REGISTER_Rev1")).toBe("diagnostic");
+    expect(sheetDisposition("RELATIONSHIP_REGISTER_Rev1")).toBe("relationship");
     expect(sheetDisposition("ENTITY_REGISTER")).toBe("presentation");
   });
 
@@ -54,7 +54,7 @@ describe("PMS11 Rev.2 workbook contract", () => {
     });
   });
 
-  it("imports typed Gap–WPS and Rule–WPS edges but does not re-import the Rev.1 mirror", () => {
+  it("imports typed Gap–WPS, Rule–WPS, and valid supplemental Rev.1 edges without explicit mirror rows", () => {
     const buffer = workbookBuffer({
       Relationships: [
         ["Parent Entity","Parent ID","Child Entity","Child ID","Source Field"],
@@ -69,14 +69,18 @@ describe("PMS11 Rev.2 workbook contract", () => {
         ["MAP-1","R-001","WPS-23","Primary","Approved","Explicit mapping"],
       ],
       RELATIONSHIP_REGISTER_Rev1: [
-        ["Relationship ID","Parent Entity","Parent ID","Child Entity","Child ID","Relationship Type"],
-        ["REL-1","Gaps","G-001","WPS","WPS-23","RELATED_TO_WPS"],
+        ["Relationship ID","Parent Entity","Parent ID","Child Entity","Child ID","Relationship Type","Source Sheet","Source Field","Source Value","Validation Status","Issue"],
+        ["REL-1","Gaps","G-001","WPS","WPS-23","Existing explicit relationship","Relationships","WPS ID","WPS-23","OK",""],
+        ["REL-2","Crew_Requirements","CR-1","Crew_Roles","ROLE-1","Derived from multi-value/source field","Crew_Requirements","Role ID","ROLE-1","OK",""],
+        ["REL-3","Crew_Requirements","CR-2","Crew_Roles","ROLE-2","Derived from multi-value/source field","Crew_Requirements","Role ID","ROLE-2","BROKEN_REFERENCE","Missing target"],
       ],
     });
     const links = parseRelationshipLinks(buffer);
     expect(links.some(l => l.source_sheet === "Gap_WPS" && l.link_type === "RELATED_TO_WPS")).toBe(true);
     expect(links.some(l => l.source_sheet === "RULE_WPS_MAP" && l.link_type === "PRIMARY" && l.status === "Approved")).toBe(true);
-    expect(links.some(l => l.source_sheet === "RELATIONSHIP_REGISTER_Rev1")).toBe(false);
+    expect(links.some(l => l.source_sheet === "RELATIONSHIP_REGISTER_Rev1" && l.link_type === "DERIVED_FROM_SOURCE_FIELD" && l.source_entity === "crew_requirement" && l.target_entity === "crew_role")).toBe(true);
+    expect(links.some(l => l.source_rid === "CR-2")).toBe(false);
+    expect(links.some(l => l.source_sheet === "RELATIONSHIP_REGISTER_Rev1" && l.link_type === "REGISTERED")).toBe(false);
   });
 
   it("parses department assignment rows with entity and provenance", () => {
