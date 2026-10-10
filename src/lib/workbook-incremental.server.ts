@@ -429,6 +429,7 @@ export function parseMasterData(buffer: ArrayBuffer): MasterData {
   const mappingOwnerKey=findKey(["Rev.1 Operational Owner Role"]);
   const appRoleKey=findKey(["Rev.1 Application Role","Application Role","App Role","User Role","System Role"]);
   const mappingStatusKey=findKey(["Rev.1 Status"]);
+  const appRoleStatusKey=findKey(["Rev.1 Status_1"]);
   const colValues = (k?: string) =>
     k ? [...new Set(rows.map(r=>String(r[k] ?? "").trim()).filter(Boolean))] : [];
   const isPlaceholder = (value: string) => /^(OPEN DECISION|TO BE ASSIGNED|TBC|TBD)$/i.test(value.trim());
@@ -453,7 +454,7 @@ export function parseMasterData(buffer: ArrayBuffer): MasterData {
 
   // Controlled lists are retained independently of governance entities. The
   // Rev.1 mapping columns are not dropdown vocabularies and are not re-read as lists.
-  const skip = new Set([deptKey, ownerKey, mappingDeptKey, mappingOwnerKey, appRoleKey, mappingStatusKey].filter(Boolean) as string[]);
+  const skip = new Set([deptKey, ownerKey, mappingDeptKey, mappingOwnerKey, appRoleKey, mappingStatusKey, appRoleStatusKey].filter(Boolean) as string[]);
   const controlledLists: Record<string,string[]> = {};
   for (const k of keys) {
     if (skip.has(k) || k.trim().startsWith("Rev.1 ")) continue;
@@ -467,7 +468,7 @@ export function parseMasterData(buffer: ArrayBuffer): MasterData {
     for (const r of rows) {
       const department = String(r[mappingDeptKey] ?? "").trim();
       const role = String(r[appRoleKey] ?? "").trim().toLowerCase();
-      const status = String(mappingStatusKey ? r[mappingStatusKey] ?? "" : "").trim().toUpperCase();
+      const status = String(appRoleStatusKey ? r[appRoleStatusKey] ?? "" : "").trim().toUpperCase();
       if (departmentSet.has(department) && isValidApplicationRole(role) &&
           (!status || status === "DERIVED_FROM_MASTER_DATA") && !seen.has(department + ":" + role)) {
         seen.add(department + ":" + role);
