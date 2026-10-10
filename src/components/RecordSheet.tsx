@@ -123,6 +123,7 @@ function Detail({ id }: { id: string }) {
       no_go_active: record.no_go_active,
       criticality: record.criticality,
       applicability: record.applicability,
+      wps_id: record.wps_id,
     });
   }, [record?.id, record?.updated_at]);
 
@@ -176,6 +177,13 @@ function Detail({ id }: { id: string }) {
   const applicabilityValues = [
     ...new Set([record.applicability, ...governedApplicability].filter(Boolean) as string[]),
   ];
+
+  // WPS options: canonical Work Package records only (governed vocabulary, no invented values).
+  const wpsOptions = all
+    .filter((item) => item.entity === "wps")
+    .map((item) => ({ rid: item.rid, title: item.title }))
+    .sort((a, b) => a.rid.localeCompare(b.rid, undefined, { numeric: true }));
+  const showWpsField = record.entity !== "wps" && record.entity !== "gate";
 
   const ownerValues = [
     ...new Set(
@@ -505,6 +513,35 @@ function Detail({ id }: { id: string }) {
             </SelectContent>
           </Select>
         </div>
+
+        {showWpsField ? (
+          <div className="space-y-1">
+            <FieldLabel htmlFor="record-wps">Work Package (WPS)</FieldLabel>
+            <Select
+              disabled={!canEdit || !editing}
+              value={form.wps_id ?? "none"}
+              onValueChange={(value) => updateForm({ wps_id: value === "none" ? null : value })}
+            >
+              <SelectTrigger id="record-wps">
+                <SelectValue placeholder="Select Work Package" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="none">— No Work Package —</SelectItem>
+                {(form.wps_id && !wpsOptions.some((w) => w.rid === form.wps_id)) ? (
+                  <SelectItem value={form.wps_id}>{form.wps_id} (current)</SelectItem>
+                ) : null}
+                {wpsOptions.map((w) => (
+                  <SelectItem key={w.rid} value={w.rid}>
+                    {w.rid} — {w.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">
+              Options are the governed WPS records; linking a rule feeds its WPS relationship summary, readiness and gate inheritance.
+            </p>
+          </div>
+        ) : null}
 
         <div className="space-y-1">
           <FieldLabel htmlFor="record-criticality">Criticality</FieldLabel>
