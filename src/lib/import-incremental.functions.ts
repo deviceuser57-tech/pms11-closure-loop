@@ -183,7 +183,7 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
       for (const department of departments ?? []) if (!priorDepartmentNames.has(department.name.trim()) && master.departments.includes(department.name.trim())) createdDeptIds.push(department.id);
       for (const name of master.ownerRoles) {
         const { data: created, error:e } = await context.supabase.from("owner_roles")
-          .upsert({name,active:true},{onConflict:"name"}).select("id");
+          .upsert({name,active:true},{onConflict:"name",ignoreDuplicates:true}).select("id");
         if (e) throw e;
         void created;
       }
@@ -228,6 +228,7 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
         }
         const sourceChanged = JSON.stringify((old as Record<string,unknown>).data ?? {}) !== JSON.stringify(r.data ?? {});
         if (!sourceChanged) { unchanged++; continue; }
+        updatedRecordSnapshots.push(old as Record<string, unknown>);
         const patch = Object.fromEntries(sourceFields.filter(k => k !== "entity" && k !== "rid").map(k => [k,(next as Record<string,unknown>)[k]]));
         const { error:e } = await context.supabase.from("records").update(patch as never).eq("id",old.id);
         if (e) throw new Error("Update " + r.entity + "/" + r.rid + ": " + e.message);
