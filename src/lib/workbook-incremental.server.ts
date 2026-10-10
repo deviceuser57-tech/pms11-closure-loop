@@ -91,7 +91,8 @@ function collectLinks(rec: WorkbookRecord): WorkbookLink[] {
   if (rec.wps_id) push("wps", rec.wps_id, "BELONGS_TO_WPS", "WPS ID");
   if (rec.gate_id) push("gate", rec.gate_id, "BLOCKS_GATE", "Readiness Gate");
   if (rec.parent_id) push("", rec.parent_id, "PARENT_OF", "parent");
-  for (const id of rec.links ?? []) push("", id, "SEQUENCE_LINK", "dependencies");
+  // Predecessor and successor arrays are directional and are parsed from the canonical Dependencies sheet.
+  // Do not collapse them into ambiguous undirected links here.
   return links;
 }
 
