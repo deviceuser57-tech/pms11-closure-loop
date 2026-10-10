@@ -175,7 +175,7 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
       p_departments: master.departments,
       p_owner_roles: master.ownerRoles,
       p_owner_mappings: master.mappings,
-      p_app_role_mappings: master.appRoleMappings,
+      p_app_role_mappings: master.appRoleMappings.map(m => ({department:m.department, role:m.appRole})),
       p_records: incoming.map(wb.toDbRecord),
       p_links: linkRows,
       p_department_assignments: assignments,
