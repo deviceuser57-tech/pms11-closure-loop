@@ -29,9 +29,9 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const byKey = new Map((existing ?? []).map((r) => [r.entity + ":" + r.rid, r]));
 
     // Validate references against actual DB state without writing anything.
-    const entityOfRid = new Map<string,string>();
-    for (const r of existing ?? []) entityOfRid.set(r.rid, r.entity);
-    for (const r of incoming) entityOfRid.set(r.rid, r.entity);
+    const knownEntityKeys = new Set<string>();
+    for (const r of existing ?? []) knownEntityKeys.add(r.entity + ":" + r.rid);
+    for (const r of incoming) knownEntityKeys.add(r.entity + ":" + r.rid);
     const invalidRefs: Array<{entity:string;rid:string;ref:string;field:string}> = [];
     for (const r of incoming) {
       for (const [field, ids, expected] of [
@@ -40,17 +40,18 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
         ["acceptance_ids", r.acceptance_ids, "acceptance"],
       ] as const) {
         for (const ref of ids ?? []) {
-          const knownEntity = entityOfRid.get(ref);
-          if (knownEntity === undefined || knownEntity !== expected) invalidRefs.push({ entity:r.entity, rid:r.rid, ref, field });
+          if (!knownEntityKeys.has(expected + ":" + ref)) invalidRefs.push({ entity:r.entity, rid:r.rid, ref, field });
         }
       }
     }
 
     // Governance would-be writes are computed from MASTER_DATA only (no deletes here).
-    const { data: dbDepartments } = await context.supabase.from("departments").select("id,name");
+    const { data: dbDepartments, error: departmentReadError } = await context.supabase.from("departments").select("id,name");
+    if (departmentReadError) throw departmentReadError;
     const deptByName = new Map((dbDepartments ?? []).map(d=>[d.name.trim(), d.id]));
     const newDepartments = master.departments.filter(n => !deptByName.has(n));
-    const { data: dbRoles } = await context.supabase.from("owner_roles").select("id,name");
+    const { data: dbRoles, error: ownerRoleReadError } = await context.supabase.from("owner_roles").select("id,name");
+    if (ownerRoleReadError) throw ownerRoleReadError;
     const roleNames = new Set((dbRoles ?? []).map(o=>o.name.trim()));
     const newOwnerRoles = master.ownerRoles.filter(n => !roleNames.has(n));
 
