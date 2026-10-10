@@ -117,6 +117,7 @@ export type ParseResult = {
   ambiguousRefs: Array<{ sheet: string; rid: string; field: string; value: string }>;
   /** Sheets present in the workbook but with no contract disposition. */
   unknownSheets: string[];
+  relationshipRegister: { rows: number; brokenReferences: number };
 };
 
 export function parseWorkbookDetailed(buffer: ArrayBuffer): ParseResult {
@@ -238,7 +239,14 @@ export function parseWorkbookDetailed(buffer: ArrayBuffer): ParseResult {
 
   const links = records.flatMap(collectLinks);
   const unknownSheets = wb.SheetNames.filter((n) => sheetDisposition(n) === "unknown");
-  return { records, links, ambiguousRefs, unknownSheets };
+  const relationshipRegisterRows = wb.Sheets["RELATIONSHIP_REGISTER_Rev1"]
+    ? xlsx.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets["RELATIONSHIP_REGISTER_Rev1"], { defval: null, raw: true })
+    : [];
+  const relationshipRegister = {
+    rows: relationshipRegisterRows.length,
+    brokenReferences: relationshipRegisterRows.filter(r => String(r["Validation Status"] ?? "").trim().toUpperCase() === "BROKEN_REFERENCE").length,
+  };
+  return { records, links, ambiguousRefs, unknownSheets, relationshipRegister };
 }
 
 
@@ -322,11 +330,11 @@ export function parseDependencyLinks(buffer: ArrayBuffer): WorkbookLink[] {
 export function parseRelationshipLinks(buffer: ArrayBuffer): WorkbookLink[] {
   const wb = xlsx.read(new Uint8Array(buffer), { cellDates: true, raw: true });
   const norm = (v: unknown) => typeof v === "string" ? v.trim() : "";
-  const entityKey = (name: string) => SHEET_ENTITY[name] ?? WORKSTREAM_SHEETS[name] ?? OPERATIONAL_EXTRA_SHEETS[name] ?? name.toLowerCase();
+  const entityKey = (name: string) => SHEET_ENTITY[name] ?? WORKSTREAM_SHEETS[name] ?? OPERATIONAL_EXTRA_SHEETS[name] ?? "";
   const out: WorkbookLink[] = [];
 
-  // Relationships is the canonical broad register. RELATIONSHIP_REGISTER_Rev1 is
-  // a derived/validation mirror and is deliberately not imported a second time.
+  // Relationships is the canonical broad register. The Rev.1 register contributes
+  // only valid supplemental multi-value edges; its explicit mirror rows are skipped.
   const relationships = wb.Sheets["Relationships"];
   if (relationships) {
     const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(relationships, { defval: null, raw: true });
@@ -372,6 +380,31 @@ export function parseRelationshipLinks(buffer: ArrayBuffer): WorkbookLink[] {
         link_type: mapping || "APPLIES_TO_WPS", source_sheet: "RULE_WPS_MAP",
         source_field: norm(r["Mapping ID"]) || "Rule ID/WPS ID",
         status: norm(r["Approval Status"]) || null, notes: norm(r["Comments"]) || null,
+      });
+    }
+  }
+  const register = wb.Sheets["RELATIONSHIP_REGISTER_Rev1"];
+  if (register) {
+    const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(register, { defval: null, raw: true });
+    for (const r of rows) {
+      const relationshipType = norm(r["Relationship Type"]).toLowerCase();
+      const validationStatus = norm(r["Validation Status"]).toUpperCase();
+      if (!relationshipType.includes("derived from multi-value/source field") || validationStatus !== "OK") continue;
+      const sourceEntity = entityKey(norm(r["Parent Entity"]));
+      const targetEntity = entityKey(norm(r["Child Entity"]));
+      const sourceRid = norm(r["Parent ID"]);
+      const targetRid = norm(r["Child ID"]);
+      if (!sourceEntity || !targetEntity || !sourceRid || !targetRid) continue;
+      const sourceValue = norm(r["Source Value"]);
+      const issue = norm(r["Issue"]);
+      out.push({
+        source_entity: sourceEntity, source_rid: sourceRid,
+        target_entity: targetEntity, target_rid: targetRid,
+        link_type: "DERIVED_FROM_SOURCE_FIELD",
+        source_sheet: "RELATIONSHIP_REGISTER_Rev1",
+        source_field: norm(r["Source Field"]) || norm(r["Relationship ID"]),
+        status: validationStatus,
+        notes: [sourceValue, issue].filter(Boolean).join(" | ") || null,
       });
     }
   }
