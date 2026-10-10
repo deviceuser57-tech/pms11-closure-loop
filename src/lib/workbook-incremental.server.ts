@@ -24,6 +24,7 @@ export type WorkbookRecord = {
   rule_ids?: string[];
   links?: string[];
   doc_number?: string;
+  doc_source?: string;
   revision?: string;
   issuer?: string;
   department?: string;
@@ -208,19 +209,27 @@ export function parseWorkbookDetailed(buffer: ArrayBuffer): ParseResult {
         put("rule_ids",[]); put("evidence_ids",arrT("Evidence Required","evidence"));
         put("links",[...arrT("Logical Predecessor IDs","execution"),...arrT("Schedule Predecessor IDs","execution")]);
       } else if (entity === "functional") {
-        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Status")); put("criticality",scalar(raw,"Risk_Level"));
-        put("rule_ids",arrT("Source Rule ID","rule")); put("evidence_ids",arrT("Evidence ID","evidence"));
+        put("wps_id",scalar(raw,"WPS_ID")); put("criticality",scalar(raw,"Risk_Level"));
+        put("gate_id",scalar(raw,"Readiness_Gate"));
+        put("rule_ids",arrT("Governing_Rule_Ref","rule"));
+        put("acceptance_ids",arrT("Canonical_Acceptance_Criteria_ID","acceptance"));
       } else if (entity === "source") {
         put("status",scalar(raw,"Status")); put("issuer",scalar(raw,"Authority")); put("doc_number",scalar(raw,"Document Number")); put("revision",scalar(raw,"Edition")); put("doc_source",scalar(raw,"URL"));
         put("rule_ids",arrT("Related Rule IDs","rule"));
+      } else if (entity === "crew_register") {
+        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Deployment Approval") ?? scalar(raw,"Credential Status"));
+        put("evidence_ids",arrT("Evidence ID","evidence"));
+      } else if (entity === "crew_certificate") {
+        put("status",scalar(raw,"Verification Status") ?? scalar(raw,"Credential Result"));
+        put("expiry_date",scalar(raw,"Expiry Date")); put("issuer",scalar(raw,"Issuer")); put("doc_number",scalar(raw,"Certificate Number"));
       } else if (entity.startsWith("crew_") || entity === "manning_plan") {
         put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Approval Status") ?? scalar(raw,"Applicability"));
         put("rule_ids",arrT("Source Rule ID","rule")); put("evidence_ids",arrT("Evidence ID","evidence"));
       } else if (entity.startsWith("accommodation_")) {
-        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Inspection Status") ?? scalar(raw,"Control Result"));
+        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Approval Status") ?? scalar(raw,"Capacity Result") ?? scalar(raw,"Inspection Status") ?? scalar(raw,"Control Result"));
         put("rule_ids",arrT("Source Rule ID","rule")); put("evidence_ids",arrT("Evidence ID","evidence"));
       } else if (entity.startsWith("helideck_")) {
-        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Installed Status") ?? scalar(raw,"Check Status"));
+        put("wps_id",scalar(raw,"WPS ID")); put("status",scalar(raw,"Installed Status") ?? scalar(raw,"Verification Status") ?? scalar(raw,"Check Status"));
         put("evidence_ids",arrT("Permissions / Certificate Evidence","evidence").concat(arrT("Evidence ID","evidence")));
       }
       records.push(rec);
@@ -390,7 +399,7 @@ export function toDbRecord(r: WorkbookRecord) {
     expiry_date:r.expiry_date ?? null, criticality:r.criticality ?? null, source_kind:"imported",
     applicability:r.applicability ?? null, evidence_ids:r.evidence_ids ?? [], acceptance_ids:r.acceptance_ids ?? [],
     rule_ids:r.rule_ids ?? [], links:r.links ?? [], doc_number:r.doc_number ?? null, revision:r.revision ?? null,
-    issuer:r.issuer ?? null, department:r.department ?? null, data:r.data ?? {},
+    issuer:r.issuer ?? null, doc_source:r.doc_source ?? null, department:r.department ?? null, data:r.data ?? {},
   };
 }
 
