@@ -440,15 +440,16 @@ export function parseMasterData(buffer: ArrayBuffer): MasterData {
   const ownerRoles = colValues(ownerKey).filter(value => !isPlaceholder(value));
   const departmentSet = new Set(departments);
   const ownerRoleSet = new Set(ownerRoles);
-  const mappings = [...new Map(rows.map(r => {
+  const mappingPairs = rows.flatMap(r => {
     const department = String(mappingDeptKey ? r[mappingDeptKey] ?? "" : "").trim();
     const ownerRole = String(mappingOwnerKey ? r[mappingOwnerKey] ?? "" : "").trim();
     const status = String(mappingStatusKey ? r[mappingStatusKey] ?? "" : "").trim();
     const valid = departmentSet.has(department) && ownerRoleSet.has(ownerRole) &&
       !isPlaceholder(department) && !isPlaceholder(ownerRole) &&
       (!status || status.toUpperCase() === "DERIVED_FROM_MASTER_DATA");
-    return [department + "\u0000" + ownerRole, {department, ownerRole, valid}] as const;
-  }).filter(([,v]) => v.valid).map(([key,v]) => [key,{department:v.department,ownerRole:v.ownerRole}] as const)].map(([,v])=>v);
+    return valid ? [{department, ownerRole}] : [];
+  });
+  const mappings = [...new Map(mappingPairs.map(m => [m.department + "\u0000" + m.ownerRole, m])).values()];
 
   // Controlled lists are retained independently of governance entities. The
   // Rev.1 mapping columns are not dropdown vocabularies and are not re-read as lists.
