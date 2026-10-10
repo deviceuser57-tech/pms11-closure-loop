@@ -196,8 +196,7 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
         for (const row of ins ?? []) writtenLinkIds.push(row.id);
       }
 
-      // 4. Department assignments from the record's governed department column.
-      let deptAssignments = 0;
+      // 4. Department assignments from the explicit assignment register or fallback field.
       const { data: savedRecords, error: sre } = await context.supabase.from("records")
         .select("id, entity, rid, department").eq("source_kind","imported");
       if (sre) throw sre;
@@ -233,7 +232,8 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
         departmentAssignments:deptAssignments,
         unresolvedRefs:{ ambiguous:parsed.ambiguousRefs.length, unknownSheets:parsed.unknownSheets },
       };
-      await context.supabase.from("import_runs").insert({ summary } as never);
+      const { error: auditError } = await context.supabase.from("import_runs").insert({ summary } as never);
+      if (auditError) throw new Error("import_runs audit write failed: " + auditError.message);
       return summary;
     } catch (err) {
       await rollback();
