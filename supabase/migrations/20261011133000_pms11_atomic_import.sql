@@ -74,19 +74,19 @@ begin
   insert into public.records(
     entity, rid, title, description, wps_id, gate_id, parent_id, status, owner, reviewer, approver,
     due_date, expiry_date, criticality, source_kind, applicability, evidence_ids, acceptance_ids,
-    rule_ids, links, doc_number, revision, issuer, department, data
+    rule_ids, links, doc_number, revision, issuer, doc_source, department, data
   )
   select
     x.entity, x.rid, x.title, x.description, x.wps_id, x.gate_id, x.parent_id, coalesce(x.status, 'Open'),
     x.owner, x.reviewer, x.approver, x.due_date, x.expiry_date, x.criticality, 'imported', x.applicability,
     coalesce(x.evidence_ids, '{}'::text[]), coalesce(x.acceptance_ids, '{}'::text[]),
     coalesce(x.rule_ids, '{}'::text[]), coalesce(x.links, '{}'::text[]), x.doc_number, x.revision,
-    x.issuer, x.department, coalesce(x.data, '{}'::jsonb)
+    x.issuer, x.doc_source, x.department, coalesce(x.data, '{}'::jsonb)
   from jsonb_to_recordset(coalesce(p_records, '[]'::jsonb)) as x(
     entity text, rid text, title text, description text, wps_id text, gate_id text, parent_id text,
     status text, owner text, reviewer text, approver text, due_date date, expiry_date date,
     criticality text, source_kind text, applicability text, evidence_ids text[], acceptance_ids text[],
-    rule_ids text[], links text[], doc_number text, revision text, issuer text, department text, data jsonb
+    rule_ids text[], links text[], doc_number text, revision text, issuer text, doc_source text, department text, data jsonb
   )
   on conflict (entity, rid) do update set
     title = excluded.title,
@@ -109,6 +109,7 @@ begin
     doc_number = excluded.doc_number,
     revision = excluded.revision,
     issuer = excluded.issuer,
+    doc_source = excluded.doc_source,
     department = excluded.department,
     data = excluded.data
   where public.records.source_kind = 'imported'
