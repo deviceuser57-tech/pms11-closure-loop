@@ -313,7 +313,8 @@ export function parseDependencyLinks(buffer: ArrayBuffer): WorkbookLink[] {
       lag_days: typeof r["Lag Days"] === "number" ? r["Lag Days"] : null,
       status: typeof r["Validation Status"] === "string" ? r["Validation Status"] : null,
       notes: typeof r["Rationale"] === "string" ? r["Rationale"] : null,
-      source_sheet: "Dependencies", source_field: String(r["Link ID"] ?? "Predecessor ID/Successor ID"),;
+      source_sheet: "Dependencies", source_field: String(r["Link ID"] ?? "Predecessor ID/Successor ID"),
+    });
   }
   return out;
 }
