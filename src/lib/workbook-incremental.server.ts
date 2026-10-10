@@ -425,43 +425,55 @@ export function parseMasterData(buffer: ArrayBuffer): MasterData {
 
   const ownerKey=findKey(["Owners and Roles","Owner Role"],17);
   const deptKey=findKey(["Departments","Department"],18);
-  const appRoleKey=findKey(["Application Role","App Role","User Role","System Role"]);
-
+  const mappingDeptKey=findKey(["Rev.1 Department"]);
+  const mappingOwnerKey=findKey(["Rev.1 Operational Owner Role"]);
+  const appRoleKey=findKey(["Rev.1 Application Role","Application Role","App Role","User Role","System Role"]);
+  const mappingStatusKey=findKey(["Rev.1 Status"]);
   const colValues = (k?: string) =>
     k ? [...new Set(rows.map(r=>String(r[k] ?? "").trim()).filter(Boolean))] : [];
+  const isPlaceholder = (value: string) => /^(OPEN DECISION|TO BE ASSIGNED|TBC|TBD)$/i.test(value.trim());
 
-  const departments=colValues(deptKey);
-  const ownerRoles=colValues(ownerKey);
+  // The wide MASTER_DATA columns are independent lists. Never zip owner and
+  // department list rows to invent mappings; mappings come only from explicit
+  // Rev.1 mapping columns.
+  const departments = colValues(deptKey).filter(value => !isPlaceholder(value));
+  const ownerRoles = colValues(ownerKey).filter(value => !isPlaceholder(value));
+  const departmentSet = new Set(departments);
+  const ownerRoleSet = new Set(ownerRoles);
+  const mappings = [...new Map(rows.map(r => {
+    const department = String(mappingDeptKey ? r[mappingDeptKey] ?? "" : "").trim();
+    const ownerRole = String(mappingOwnerKey ? r[mappingOwnerKey] ?? "" : "").trim();
+    const status = String(mappingStatusKey ? r[mappingStatusKey] ?? "" : "").trim();
+    const valid = departmentSet.has(department) && ownerRoleSet.has(ownerRole) &&
+      !isPlaceholder(department) && !isPlaceholder(ownerRole) &&
+      (!status || status.toUpperCase() === "DERIVED_FROM_MASTER_DATA");
+    return [department + "\u0000" + ownerRole, {department, ownerRole, valid}] as const;
+  }).filter(([,v]) => v.valid).map(([key,v]) => [key,{department:v.department,ownerRole:v.ownerRole}] as const)].map(([,v])=>v);
 
-  const mappings=[...new Map(rows.map(r=>{
-    const d=String(deptKey ? r[deptKey] ?? "" : "").trim();
-    const o=String(ownerKey ? r[ownerKey] ?? "" : "").trim();
-    return [d+"\u0000"+o,{department:d,ownerRole:o}] as const;
-  }).filter(([,v])=>v.department&&v.ownerRole))].map(([,v])=>v);
-
-  // Controlled lists: every remaining column is a governed value list.
-  const skip = new Set([deptKey, ownerKey, appRoleKey].filter(Boolean) as string[]);
+  // Controlled lists are retained independently of governance entities. The
+  // Rev.1 mapping columns are not dropdown vocabularies and are not re-read as lists.
+  const skip = new Set([deptKey, ownerKey, mappingDeptKey, mappingOwnerKey, appRoleKey, mappingStatusKey].filter(Boolean) as string[]);
   const controlledLists: Record<string,string[]> = {};
   for (const k of keys) {
-    if (skip.has(k)) continue;
+    if (skip.has(k) || k.trim().startsWith("Rev.1 ")) continue;
     const vals = colValues(k);
     if (vals.length && vals.length <= 60) controlledLists[k.trim()] = vals;
   }
 
-  // Explicit application-role column only; validated against canonical roles.
   const appRoleMappings: MasterData["appRoleMappings"] = [];
-  if (appRoleKey) {
+  if (mappingDeptKey && appRoleKey) {
     const seen = new Set<string>();
     for (const r of rows) {
-      const d=String(deptKey ? r[deptKey] ?? "" : "").trim();
-      const role=String(r[appRoleKey] ?? "").trim().toLowerCase();
-      if (d && isValidApplicationRole(role) && !seen.has(d+role)) {
-        seen.add(d+role);
-        appRoleMappings.push({department:d, appRole:role});
+      const department = String(r[mappingDeptKey] ?? "").trim();
+      const role = String(r[appRoleKey] ?? "").trim().toLowerCase();
+      const status = String(mappingStatusKey ? r[mappingStatusKey] ?? "" : "").trim().toUpperCase();
+      if (departmentSet.has(department) && isValidApplicationRole(role) &&
+          (!status || status === "DERIVED_FROM_MASTER_DATA") && !seen.has(department + ":" + role)) {
+        seen.add(department + ":" + role);
+        appRoleMappings.push({department, appRole:role});
       }
     }
   }
-
   return {departments,ownerRoles,mappings,appRoleMappings,controlledLists};
 }
 export function fingerprint(r: unknown): string {
