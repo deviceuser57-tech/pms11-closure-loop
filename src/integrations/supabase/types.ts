@@ -261,6 +261,105 @@ export type Database = {
         }
         Relationships: []
       }
+      record_departments: {
+        Row: {
+          created_at: string
+          department_id: string
+          id: string
+          notes: string | null
+          record_id: string
+          role: string
+          source_sheet: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          id?: string
+          notes?: string | null
+          record_id: string
+          role?: string
+          source_sheet?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          id?: string
+          notes?: string | null
+          record_id?: string
+          role?: string
+          source_sheet?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_departments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_departments_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      record_links: {
+        Row: {
+          created_at: string
+          id: string
+          lag_days: number | null
+          link_type: string
+          notes: string | null
+          role: string | null
+          sequence: number | null
+          source_entity: string
+          source_field: string | null
+          source_rid: string
+          source_sheet: string
+          status: string | null
+          target_entity: string
+          target_rid: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lag_days?: number | null
+          link_type: string
+          notes?: string | null
+          role?: string | null
+          sequence?: number | null
+          source_entity: string
+          source_field?: string | null
+          source_rid: string
+          source_sheet: string
+          status?: string | null
+          target_entity: string
+          target_rid: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lag_days?: number | null
+          link_type?: string
+          notes?: string | null
+          role?: string | null
+          sequence?: number | null
+          source_entity?: string
+          source_field?: string | null
+          source_rid?: string
+          source_sheet?: string
+          status?: string | null
+          target_entity?: string
+          target_rid?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       records: {
         Row: {
           acceptance_ids: string[]
@@ -418,6 +517,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workbook_diagnostics: {
+        Row: {
+          id: number
+          imported_at: string
+          payload: Json
+          row_number: number | null
+          run_id: string | null
+          source_sheet: string
+        }
+        Insert: {
+          id?: number
+          imported_at?: string
+          payload: Json
+          row_number?: number | null
+          run_id?: string | null
+          source_sheet: string
+        }
+        Update: {
+          id?: number
+          imported_at?: string
+          payload?: Json
+          row_number?: number | null
+          run_id?: string | null
+          source_sheet?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
