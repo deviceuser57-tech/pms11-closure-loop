@@ -1,6 +1,6 @@
 import * as xlsx from "xlsx";
 import {
-  SHEET_ENTITY, WORKSTREAM_SHEETS, OPERATIONAL_EXTRA_SHEETS, isValidApplicationRole, parseRefs,
+  SHEET_ENTITY, WORKSTREAM_SHEETS, OPERATIONAL_EXTRA_SHEETS, isValidApplicationRole, parseRefs, sheetDisposition,
 } from "./workbook-contract";
 
 export type WorkbookRecord = {
@@ -227,7 +227,7 @@ export function parseWorkbookDetailed(buffer: ArrayBuffer): ParseResult {
   }
 
   const links = records.flatMap(collectLinks);
-  const unknownSheets = wb.SheetNames.filter((n) => !ENTITY[n] && !KNOWN_NON_INGEST.has(n));
+  const unknownSheets = wb.SheetNames.filter((n) => sheetDisposition(n) === "unknown");
   return { records, links, ambiguousRefs, unknownSheets };
 }
 
@@ -247,6 +247,51 @@ const KNOWN_NON_INGEST = new Set([
 /** Back-compatible wrapper used by existing callers. */
 export function parseWorkbook(buffer: ArrayBuffer): WorkbookRecord[] {
   return parseWorkbookDetailed(buffer).records;
+}
+
+/** Canonical department assignments from the workbook's explicit assignment register. */
+export type WorkbookDepartmentAssignment = {
+  entity: string;
+  rid: string;
+  department: string;
+  source_sheet: "DEPARTMENT_ASSIGNMENTS";
+  source_field: string;
+  source_value: string | null;
+  assignment_method: string | null;
+  status: string | null;
+  open_decision: string | null;
+};
+
+export function parseDepartmentAssignments(buffer: ArrayBuffer): WorkbookDepartmentAssignment[] {
+  const wb = xlsx.read(new Uint8Array(buffer), { cellDates: true, raw: true });
+  const sheet = wb.Sheets["DEPARTMENT_ASSIGNMENTS"];
+  if (!sheet) return [];
+  const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true });
+  const canonicalEntity = (value: unknown): string => {
+    const raw = typeof value === "string" ? value.trim() : "";
+    if (!raw) return "";
+    if (SHEET_ENTITY[raw]) return SHEET_ENTITY[raw];
+    if (Object.values(SHEET_ENTITY).includes(raw.toLowerCase())) return raw.toLowerCase();
+    if (WORKSTREAM_SHEETS[raw]) return WORKSTREAM_SHEETS[raw];
+    if (OPERATIONAL_EXTRA_SHEETS[raw]) return OPERATIONAL_EXTRA_SHEETS[raw];
+    const normalized = raw.toLowerCase().replace(/[\s-]+/g, "_");
+    return Object.values(WORKSTREAM_SHEETS).includes(normalized) ||
+      Object.values(OPERATIONAL_EXTRA_SHEETS).includes(normalized) ? normalized : "";
+  };
+  return rows.flatMap((row) => {
+    const entity = canonicalEntity(row["Entity"]);
+    const rid = String(row["Record ID"] ?? "").trim();
+    const department = String(row["Primary Department"] ?? "").trim();
+    if (!entity || !rid || !department) return [];
+    return [{
+      entity, rid, department, source_sheet: "DEPARTMENT_ASSIGNMENTS" as const,
+      source_field: String(row["Assignment Source Field"] ?? "").trim(),
+      source_value: row["Assignment Source Value"] == null ? null : String(row["Assignment Source Value"]),
+      assignment_method: row["Assignment Method"] == null ? null : String(row["Assignment Method"]),
+      status: row["Status"] == null ? null : String(row["Status"]),
+      open_decision: row["Open Decision"] == null ? null : String(row["Open Decision"]),
+    }];
+  });
 }
 
 /** Dependencies sheet → explicit DEPENDS_ON links (first-class dependency source). */
