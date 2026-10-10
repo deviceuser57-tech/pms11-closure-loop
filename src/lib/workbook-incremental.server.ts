@@ -66,7 +66,7 @@ const splitIds = (v: unknown) =>
 /** Reference columns expanded into record_links (never stored as scalar FKs). */
 export type WorkbookLink = {
   source_entity: string; source_rid: string; target_entity: string; target_rid: string;
-  link_type: string; role?: string; lag_days?: number | null; status?: string | null;
+  link_type: string; role?: string | null; lag_days?: number | null; status?: string | null;
   source_sheet: string; source_field: string; notes?: string | null; ambiguous?: boolean;
 };
 
@@ -320,17 +320,61 @@ export function parseDependencyLinks(buffer: ArrayBuffer): WorkbookLink[] {
 /** Relationships register → canonical record_links (authoritative M:N source). */
 export function parseRelationshipLinks(buffer: ArrayBuffer): WorkbookLink[] {
   const wb = xlsx.read(new Uint8Array(buffer), { cellDates: true, raw: true });
-  const sheet = wb.Sheets["Relationships"];
-  if (!sheet) return [];
-  const rows = xlsx.utils.sheet_to_json<Record<string,unknown>>(sheet, { defval: null, raw: true });
   const norm = (v: unknown) => typeof v === "string" ? v.trim() : "";
   const entityKey = (name: string) => SHEET_ENTITY[name] ?? WORKSTREAM_SHEETS[name] ?? OPERATIONAL_EXTRA_SHEETS[name] ?? name.toLowerCase();
-  return rows.filter((r) => norm(r["Parent ID"]) && norm(r["Child ID"])).map((r) => ({
-    source_entity: entityKey(norm(r["Parent Entity"])), source_rid: norm(r["Parent ID"]),
-    target_entity: entityKey(norm(r["Child Entity"])), target_rid: norm(r["Child ID"]),
-    link_type: "REGISTERED", role: null,
-    source_sheet: "Relationships", source_field: norm(r["Source Field"]),
-  }));
+  const out: WorkbookLink[] = [];
+
+  // Relationships is the canonical broad register. RELATIONSHIP_REGISTER_Rev1 is
+  // a derived/validation mirror and is deliberately not imported a second time.
+  const relationships = wb.Sheets["Relationships"];
+  if (relationships) {
+    const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(relationships, { defval: null, raw: true });
+    for (const r of rows) {
+      const parentId = norm(r["Parent ID"]);
+      const childId = norm(r["Child ID"]);
+      if (!parentId || !childId) continue;
+      out.push({
+        source_entity: entityKey(norm(r["Parent Entity"])), source_rid: parentId,
+        target_entity: entityKey(norm(r["Child Entity"])), target_rid: childId,
+        link_type: "REGISTERED", source_sheet: "Relationships",
+        source_field: norm(r["Source Field"]),
+      });
+    }
+  }
+
+  // These two registers carry semantics not represented by the broad register.
+  // They are imported as typed edges; generic REGISTERED duplicates are removed
+  // during link normalization before persistence.
+  const gapWps = wb.Sheets["Gap_WPS"];
+  if (gapWps) {
+    const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(gapWps, { defval: null, raw: true });
+    for (const r of rows) {
+      const gapId = norm(r["Gap ID"]), wpsId = norm(r["WPS ID"]);
+      if (!gapId || !wpsId) continue;
+      out.push({
+        source_entity: "gap", source_rid: gapId, target_entity: "wps", target_rid: wpsId,
+        link_type: "RELATED_TO_WPS", source_sheet: "Gap_WPS", source_field: "WPS ID",
+        status: norm(r["Critical Open"]) || norm(r["Gap Open"]) || null,
+      });
+    }
+  }
+
+  const ruleWps = wb.Sheets["RULE_WPS_MAP"];
+  if (ruleWps) {
+    const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(ruleWps, { defval: null, raw: true });
+    for (const r of rows) {
+      const ruleId = norm(r["Rule ID"]), wpsId = norm(r["WPS ID"]);
+      if (!ruleId || !wpsId) continue;
+      const mapping = norm(r["Mapping Type"]).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
+      out.push({
+        source_entity: "rule", source_rid: ruleId, target_entity: "wps", target_rid: wpsId,
+        link_type: mapping || "APPLIES_TO_WPS", source_sheet: "RULE_WPS_MAP",
+        source_field: norm(r["Mapping ID"]) || "Rule ID/WPS ID",
+        status: norm(r["Approval Status"]) || null, notes: norm(r["Comments"]) || null,
+      });
+    }
+  }
+  return out;
 }
 
 export function toDbRecord(r: WorkbookRecord) {
