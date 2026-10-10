@@ -82,7 +82,7 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
       counts:{ added:added.length, changed:changed.length, unchanged:unchanged.length, conflicts:conflicts.length },
       note:"Preview is read-only: no rows were written. Only new and changed workbook records will be applied on approval. Existing execution/review/closure/department fields are preserved.",
       masterData:{ departments:master.departments.length, ownerRoles:master.ownerRoles.length, mappings:master.mappings.length, applicationRoleMappings:master.appRoleMappings.length, controlledLists:Object.keys(master.controlledLists).length, newDepartments, newOwnerRoles },
-      relationships:{ derived:parsed.links.length, dependencies:depLinks.length, typedRegisters:relLinks.length, departmentAssignments:departmentAssignments.length },
+      relationships:{ derived:parsed.links.length, dependencies:depLinks.length, typedRegisters:relLinks.length, departmentAssignments:departmentAssignments.length, relationshipRegister:parsed.relationshipRegister },
       unresolvedRefs:{ ambiguous:parsed.ambiguousRefs.slice(0,200), ambiguousTotal:parsed.ambiguousRefs.length, invalid:invalidRefs.slice(0,200), invalidTotal:invalidRefs.length },
       unknownSheets:parsed.unknownSheets,
       blockingErrors:[
@@ -166,6 +166,7 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
       unresolvedRefs: {
         ambiguous: parsed.ambiguousRefs.length,
         unknownSheets: parsed.unknownSheets,
+        brokenRelationshipRefs: parsed.relationshipRegister.brokenReferences,
       },
       preserved: "execution_note, review_status, closure_pct, no_go_active, user accounts/roles, review/closure/audit history",
     };
