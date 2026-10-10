@@ -22,6 +22,7 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const master = wb.parseMasterData(buffer);
     const depLinks = wb.parseDependencyLinks(buffer);
     const relLinks = wb.parseRelationshipLinks(buffer);
+    const departmentAssignments = wb.parseDepartmentAssignments(buffer);
 
     const { data: existing, error } = await context.supabase
       .from("records").select("*").eq("source_kind","imported");
@@ -81,7 +82,7 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
       counts:{ added:added.length, changed:changed.length, unchanged:unchanged.length, conflicts:conflicts.length },
       note:"Preview is read-only: no rows were written. Only new and changed workbook records will be applied on approval. Existing execution/review/closure/department fields are preserved.",
       masterData:{ departments:master.departments.length, ownerRoles:master.ownerRoles.length, mappings:master.mappings.length, applicationRoleMappings:master.appRoleMappings.length, controlledLists:Object.keys(master.controlledLists).length, newDepartments, newOwnerRoles },
-      relationships:{ derived:parsed.links.length, dependencies:depLinks.length, register:relLinks.length },
+      relationships:{ derived:parsed.links.length, dependencies:depLinks.length, typedRegisters:relLinks.length, departmentAssignments:departmentAssignments.length },
       unresolvedRefs:{ ambiguous:parsed.ambiguousRefs.slice(0,200), ambiguousTotal:parsed.ambiguousRefs.length, invalid:invalidRefs.slice(0,200), invalidTotal:invalidRefs.length },
       unknownSheets:parsed.unknownSheets,
       blockingErrors:[
