@@ -199,18 +199,29 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
       // 4. Department assignments from the record's governed department column.
       let deptAssignments = 0;
       const { data: savedRecords, error: sre } = await context.supabase.from("records")
-        .select("id, entity, rid, department").eq("source_kind","imported").not("department","is",null);
-      if (!sre) {
-        const rows = (savedRecords ?? [])
-          .filter(r => r.department && deptByName.has(r.department.trim()))
-          .map(r => ({ record_id: r.id, department_id: deptByName.get((r.department ?? "").trim()), role: "primary", source_sheet: "workbook" }))
-          .filter(x => x.department_id);
-        for (const batch of chunk(rows, 500)) {
-          const { error: rde } = await context.supabase.from("record_departments")
-            .upsert(batch as never, { onConflict: "record_id,department_id", ignoreDuplicates: true });
-          if (rde) throw new Error("record_departments: " + rde.message);
-          deptAssignments += batch.length;
-        }
+        .select("id, entity, rid, department").eq("source_kind","imported");
+      if (sre) throw sre;
+      const recordByKey = new Map((savedRecords ?? []).map(r => [r.entity + ":" + r.rid, r]));
+      const explicitAssignments = departmentAssignments.flatMap(a => {
+        const record = recordByKey.get(a.entity + ":" + a.rid);
+        const departmentId = deptByName.get(a.department.trim());
+        return record && departmentId ? [{
+          record_id: record.id, department_id: departmentId, role: "primary",
+          source_sheet: a.source_sheet,
+        }] : [];
+      });
+      const fallbackAssignments = (savedRecords ?? [])
+        .filter(r => r.department && deptByName.has(r.department.trim()))
+        .map(r => ({ record_id: r.id, department_id: deptByName.get((r.department ?? "").trim()), role: "primary", source_sheet: "workbook" }))
+        .filter(x => x.department_id);
+      const assignmentRows = departmentAssignments.length ? explicitAssignments : fallbackAssignments;
+      const uniqueAssignments = [...new Map(assignmentRows.map(row => [row.record_id + ":" + row.department_id, row])).values()];
+      let deptAssignments = 0;
+      for (const batch of chunk(uniqueAssignments, 500)) {
+        const { error: rde } = await context.supabase.from("record_departments")
+          .upsert(batch as never, { onConflict: "record_id,department_id", ignoreDuplicates: true });
+        if (rde) throw new Error("record_departments: " + rde.message);
+        deptAssignments += batch.length;
       }
 
       // 5. Audit the full run.
