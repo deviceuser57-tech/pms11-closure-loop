@@ -187,23 +187,22 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
       const priorAppKeys = new Set((priorAppMappings ?? []).map(r => r.department_id + ":" + r.role));
 
       // 1. Governance: ADDITIVE only. Never delete existing mappings as a side effect.
-      const { error: de } = await context.supabase.from("departments")
-        .upsert(master.departments.map(name=>({name,active:true})),{onConflict:"name",ignoreDuplicates:true});
+      const { data: insertedDepartments, error: de } = await context.supabase.from("departments")
+        .upsert(master.departments.map(name=>({name,active:true})),{onConflict:"name",ignoreDuplicates:true}).select("id,name");
       if (de) throw de;
+      for (const department of insertedDepartments ?? []) createdDeptIds.push(department.id);
       const { data: departments, error: departmentsError } = await context.supabase.from("departments").select("id,name");
       if (departmentsError) throw departmentsError;
       const deptByName = new Map((departments ?? []).map(d=>[d.name.trim(),d.id]));
-      for (const department of departments ?? []) if (!priorDepartmentNames.has(department.name.trim()) && master.departments.includes(department.name.trim())) createdDeptIds.push(department.id);
       for (const name of master.ownerRoles) {
         const { data: created, error:e } = await context.supabase.from("owner_roles")
-          .upsert({name,active:true},{onConflict:"name",ignoreDuplicates:true}).select("id");
+          .upsert({name,active:true},{onConflict:"name",ignoreDuplicates:true}).select("id,name");
         if (e) throw e;
-        void created;
+        for (const role of created ?? []) createdRoleIds.push(role.id);
       }
       const { data: roles, error: re } = await context.supabase.from("owner_roles").select("id,name");
       if (re) throw re;
       const roleByName = new Map((roles ?? []).map(o=>[o.name.trim(),o.id]));
-      for (const role of roles ?? []) if (!priorRoleNames.has(role.name.trim()) && master.ownerRoles.includes(role.name.trim())) createdRoleIds.push(role.id);
       const ownerMappings = master.mappings
         .map(m=>({department_id:deptByName.get(m.department),owner_role_id:roleByName.get(m.ownerRole)}))
         .filter(x=>x.department_id&&x.owner_role_id);
