@@ -102,6 +102,25 @@ describe("PMS11 Rev.2 workbook contract", () => {
   });
 });
 
+  it("does not zip independent MASTER_DATA lists into invented governance mappings", () => {
+    const buffer = workbookBuffer({
+      MASTER_DATA: [
+        ["Owners and Roles","Departments","Rev.1 Department","Rev.1 Operational Owner Role","Rev.1 Application Role","Rev.1 Status","Rev.1 Status_1"],
+        ["Marine Lead","Technical","Technical","Marine Lead","","DERIVED_FROM_MASTER_DATA",""],
+        ["Engineer","Marine Operations","OPEN DECISION","OPEN DECISION","OPEN DECISION","OPEN DECISION","OPEN DECISION"],
+        ["Reviewer","HSE","Technical","Engineer","viewer","DERIVED_FROM_MASTER_DATA","DERIVED_FROM_MASTER_DATA"],
+      ],
+    });
+    const master = parseMasterData(buffer);
+    expect(master.mappings).toEqual([
+      { department:"Technical", ownerRole:"Marine Lead" },
+      { department:"Technical", ownerRole:"Engineer" },
+    ]);
+    expect(master.appRoleMappings).toEqual([{ department:"Technical", appRole:"viewer" }]);
+    expect(master.departments).not.toContain("OPEN DECISION");
+    expect(master.ownerRoles).not.toContain("OPEN DECISION");
+  });
+
 describe("import safety regression guards", () => {
   it("keeps workbook preview free of database mutation calls", () => {
     const source = fs.readFileSync(new URL("./import-incremental.functions.ts", import.meta.url), "utf8");
