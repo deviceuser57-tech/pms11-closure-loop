@@ -22,7 +22,6 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const master = wb.parseMasterData(buffer);
     const depLinks = wb.parseDependencyLinks(buffer);
     const relLinks = wb.parseRelationshipLinks(buffer);
-    const departmentAssignments = wb.parseDepartmentAssignments(buffer);
 
     const { data: existing, error } = await context.supabase
       .from("records").select("*").eq("source_kind","imported");
@@ -32,12 +31,17 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     // Validate references against actual DB state without writing anything.
     const entityOfRid = new Map<string,string>();
     for (const r of existing ?? []) entityOfRid.set(r.rid, r.entity);
+    for (const r of incoming) entityOfRid.set(r.rid, r.entity);
     const invalidRefs: Array<{entity:string;rid:string;ref:string;field:string}> = [];
     for (const r of incoming) {
-      for (const [field, ids] of [["rule_ids",r.rule_ids],["evidence_ids",r.evidence_ids],["acceptance_ids",r.acceptance_ids]] as const) {
+      for (const [field, ids, expected] of [
+        ["rule_ids", r.rule_ids, "rule"],
+        ["evidence_ids", r.evidence_ids, "evidence"],
+        ["acceptance_ids", r.acceptance_ids, "acceptance"],
+      ] as const) {
         for (const ref of ids ?? []) {
           const knownEntity = entityOfRid.get(ref);
-          if (knownEntity === undefined) invalidRefs.push({ entity:r.entity, rid:r.rid, ref, field });
+          if (knownEntity === undefined || knownEntity !== expected) invalidRefs.push({ entity:r.entity, rid:r.rid, ref, field });
         }
       }
     }
@@ -101,6 +105,7 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
     const master = wb.parseMasterData(buffer);
     const depLinks = wb.parseDependencyLinks(buffer);
     const relLinks = wb.parseRelationshipLinks(buffer);
+    const departmentAssignments = wb.parseDepartmentAssignments(buffer);
 
     // Track everything we write so a failure rolls back to the pre-import state
     // (staged import with compensating cleanup — no partially imported active dataset).
