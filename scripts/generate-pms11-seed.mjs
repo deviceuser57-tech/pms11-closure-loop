@@ -102,19 +102,26 @@ for (const [sheet, [entity, idKey, titleKey]] of Object.entries(ENTITY)) {
       put("criticality", scalar(raw,"Risk Level")); put("gate_id", scalar(raw,"Blocking Gate"));
       put("evidence_ids", arr(raw,"Evidence Required"));
     } else if (entity === "functional") {
-      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Status")); put("criticality", scalar(raw,"Risk_Level"));
-      put("rule_ids", arr(raw,"Source Rule ID")); put("evidence_ids", arr(raw,"Evidence ID"));
+      put("wps_id", scalar(raw,"WPS_ID")); put("criticality", scalar(raw,"Risk_Level"));
+      put("gate_id", scalar(raw,"Readiness_Gate")); put("rule_ids", arr(raw,"Governing_Rule_Ref"));
+      put("acceptance_ids", arr(raw,"Canonical_Acceptance_Criteria_ID"));
     } else if (entity === "source") {
       put("status", scalar(raw,"Status")); put("issuer", scalar(raw,"Authority")); put("doc_number", scalar(raw,"Document Number"));
-      put("revision", scalar(raw,"Edition")); put("rule_ids", arr(raw,"Related Rule IDs"));
+      put("revision", scalar(raw,"Edition")); put("doc_source", scalar(raw,"URL")); put("rule_ids", arr(raw,"Related Rule IDs"));
+    } else if (entity === "crew_register") {
+      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Deployment Approval") ?? scalar(raw,"Credential Status"));
+      put("evidence_ids", arr(raw,"Evidence ID"));
+    } else if (entity === "crew_certificate") {
+      put("status", scalar(raw,"Verification Status") ?? scalar(raw,"Credential Result"));
+      put("expiry_date", scalar(raw,"Expiry Date")); put("issuer", scalar(raw,"Issuer")); put("doc_number", scalar(raw,"Certificate Number"));
     } else if (entity.startsWith("crew_") || entity === "manning_plan") {
       put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Approval Status") ?? scalar(raw,"Applicability"));
       put("rule_ids", arr(raw,"Source Rule ID")); put("evidence_ids", arr(raw,"Evidence ID"));
     } else if (entity.startsWith("accommodation_")) {
-      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Inspection Status") ?? scalar(raw,"Control Result"));
+      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Approval Status") ?? scalar(raw,"Capacity Result") ?? scalar(raw,"Inspection Status") ?? scalar(raw,"Control Result"));
       put("rule_ids", arr(raw,"Source Rule ID")); put("evidence_ids", arr(raw,"Evidence ID"));
     } else if (entity.startsWith("helideck_")) {
-      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Installed Status") ?? scalar(raw,"Check Status"));
+      put("wps_id", scalar(raw,"WPS ID")); put("status", scalar(raw,"Installed Status") ?? scalar(raw,"Verification Status") ?? scalar(raw,"Check Status"));
       put("evidence_ids", [...arr(raw,"Permissions / Certificate Evidence"), ...arr(raw,"Evidence ID")]);
     }
     records.push(rec);
