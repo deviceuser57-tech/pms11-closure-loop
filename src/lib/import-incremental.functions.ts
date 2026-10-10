@@ -191,7 +191,7 @@ const inferTargetEntity = (rid: string): string => {
   if (!m) return "";
   switch (m[1]) {
     case "R": return "rule"; case "WPS": return "wps"; case "ACT": return "activity"; case "A": return "activity";
-    case "DEL": return "deliverable"; case "T": return "task"; case "G": return "gap";
+    case "DEL": return "deliverable"; case "TASK": return "task"; case "T": return "task"; case "GAP": return "gap"; case "G": return "gap";
     case "AC": return "acceptance"; case "E": return "evidence"; case "GATE": return "gate";
     default: return "";
   }
