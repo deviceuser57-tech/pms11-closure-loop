@@ -113,11 +113,50 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
     const writtenLinkIds: string[] = [];
     const createdDeptIds: string[] = [];
     const createdRoleIds: string[] = [];
+    const updatedRecordSnapshots: Array<Record<string, unknown>> = [];
+    const updatedLinkSnapshots: Array<Record<string, unknown>> = [];
+    const addedOwnerMappings: Array<{department_id:string;owner_role_id:string}> = [];
+    const addedAppRoleMappings: Array<{department_id:string;role:string}> = [];
+    const addedDepartmentAssignments: Array<{record_id:string;department_id:string}> = [];
     const rollback = async () => {
-      for (const batch of chunk(writtenLinkIds, 200)) await context.supabase.from("record_links").delete().in("id", batch);
-      for (const batch of chunk(writtenRecordIds, 200)) await context.supabase.from("records").delete().in("id", batch);
-      if (createdDeptIds.length) await context.supabase.from("departments").delete().in("id", createdDeptIds);
-      if (createdRoleIds.length) await context.supabase.from("owner_roles").delete().in("id", createdRoleIds);
+      const rollbackErrors: string[] = [];
+      for (const batch of chunk(writtenLinkIds, 200)) {
+        const { error } = await context.supabase.from("record_links").delete().in("id", batch);
+        if (error) rollbackErrors.push("delete inserted links: " + error.message);
+      }
+      for (const batch of chunk(updatedLinkSnapshots, 200)) {
+        const { error } = await context.supabase.from("record_links").upsert(batch as never, { onConflict: "id" });
+        if (error) rollbackErrors.push("restore links: " + error.message);
+      }
+      for (const batch of chunk(writtenRecordIds, 200)) {
+        const { error } = await context.supabase.from("records").delete().in("id", batch);
+        if (error) rollbackErrors.push("delete inserted records: " + error.message);
+      }
+      for (const batch of chunk(updatedRecordSnapshots, 200)) {
+        const { error } = await context.supabase.from("records").upsert(batch as never, { onConflict: "id" });
+        if (error) rollbackErrors.push("restore updated records: " + error.message);
+      }
+      for (const row of addedDepartmentAssignments) {
+        const { error } = await context.supabase.from("record_departments").delete().eq("record_id", row.record_id).eq("department_id", row.department_id);
+        if (error) rollbackErrors.push("delete department assignment: " + error.message);
+      }
+      for (const row of addedOwnerMappings) {
+        const { error } = await context.supabase.from("department_owner_roles").delete().eq("department_id", row.department_id).eq("owner_role_id", row.owner_role_id);
+        if (error) rollbackErrors.push("delete owner mapping: " + error.message);
+      }
+      for (const row of addedAppRoleMappings) {
+        const { error } = await context.supabase.from("department_app_roles").delete().eq("department_id", row.department_id).eq("role", row.role);
+        if (error) rollbackErrors.push("delete app-role mapping: " + error.message);
+      }
+      if (createdDeptIds.length) {
+        const { error } = await context.supabase.from("departments").delete().in("id", createdDeptIds);
+        if (error) rollbackErrors.push("delete new departments: " + error.message);
+      }
+      if (createdRoleIds.length) {
+        const { error } = await context.supabase.from("owner_roles").delete().in("id", createdRoleIds);
+        if (error) rollbackErrors.push("delete new owner roles: " + error.message);
+      }
+      if (rollbackErrors.length) throw new Error("Compensating rollback was incomplete: " + rollbackErrors.join("; "));
     };
 
     try {
