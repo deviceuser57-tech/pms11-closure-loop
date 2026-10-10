@@ -232,18 +232,7 @@ export function parseWorkbookDetailed(buffer: ArrayBuffer): ParseResult {
   return { records, links, ambiguousRefs, unknownSheets };
 }
 
-const KNOWN_NON_INGEST = new Set([
-  "MASTER_DATA","Relationships","Gap_WPS","RULE_WPS_MAP","Dependencies","LISTS","Department_Summary",
-  "MIGRATION_ISSUES","REDTEAM_RESULTS","REDTEAM_HISTORY","DATA_DICTIONARY","POWERPIVOT_RELATIONS",
-  "POWERPIVOT_STATUS","POWERPIVOT_GUIDE","START_HERE","DASHBOARD","CONFIG","DROPDOWN_MAP",
-  "MASTER_DATA_GUIDE","MASTER_DATA_REVIEW","OPEN_FIRST","WORKSTREAM_CONTROL","CREW_HELI_ACCOM_DASH",
-  "CREW_HELI_ACCOM_GUIDE","WORKSTREAM_REDTEAM","MASTER_DATA_AUDIT","OPEN_DECISIONS","VALIDATION_RULES",
-  "RELATIONSHIP_REGISTER_Rev1","ENTITY_REGISTER",
-  // Rev.1 report mirrors — diagnostic only
-  "Master_Departments","Master_Owner_Roles","Master_Application_Roles","Dept_Owner_Map","Dept_Application_Role_Map",
-  "MASTER_DATA_CHANGE_REPORT","RELATIONSHIP_REPAIR_REPORT","UNRESOLVED_REFERENCE_REPORT","OWNERSHIP_REPORT",
-  "APPLICATION_ROLE_REPORT","CREW_HELIDECK_ACCOM_REPORT","POWERPIVOT_READINESS_REPORT","QA_SUMMARY","README_REV1",
-]);
+
 
 /** Back-compatible wrapper used by existing callers. */
 export function parseWorkbook(buffer: ArrayBuffer): WorkbookRecord[] {
@@ -383,7 +372,7 @@ export function parseRelationshipLinks(buffer: ArrayBuffer): WorkbookLink[] {
 const inferEntityFromId = (rid: string): string => {
   if (/^WPS[-_]/i.test(rid)) return "wps";
   if (/^GATE[-_]/i.test(rid)) return "gate";
-  if (/^ACT[-_]/i.test(rid)) return "activity";
+  if (/^ACT[-_]/i.test(rid) || /^A[-_]/i.test(rid)) return "activity";
   if (/^DEL[-_]/i.test(rid)) return "deliverable";
   if (/^TASK[-_]/i.test(rid) || /^T[-_]/i.test(rid)) return "task";
   if (/^GAP[-_]/i.test(rid) || /^G[-_]/i.test(rid)) return "gap";
