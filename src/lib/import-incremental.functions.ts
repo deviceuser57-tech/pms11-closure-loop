@@ -160,6 +160,19 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
     };
 
     try {
+      const { data: priorDepartments, error: priorDepartmentsError } = await context.supabase.from("departments").select("id,name");
+      if (priorDepartmentsError) throw priorDepartmentsError;
+      const priorDepartmentNames = new Set((priorDepartments ?? []).map(d => d.name.trim()));
+      const { data: priorRoles, error: priorRolesError } = await context.supabase.from("owner_roles").select("id,name");
+      if (priorRolesError) throw priorRolesError;
+      const priorRoleNames = new Set((priorRoles ?? []).map(r => r.name.trim()));
+      const { data: priorOwnerMappings, error: priorOwnerMappingsError } = await context.supabase.from("department_owner_roles").select("department_id,owner_role_id");
+      if (priorOwnerMappingsError) throw priorOwnerMappingsError;
+      const priorOwnerKeys = new Set((priorOwnerMappings ?? []).map(r => r.department_id + ":" + r.owner_role_id));
+      const { data: priorAppMappings, error: priorAppMappingsError } = await context.supabase.from("department_app_roles").select("department_id,role");
+      if (priorAppMappingsError) throw priorAppMappingsError;
+      const priorAppKeys = new Set((priorAppMappings ?? []).map(r => r.department_id + ":" + r.role));
+
       // 1. Governance: ADDITIVE only. Never delete existing mappings as a side effect.
       const { error: de } = await context.supabase.from("departments")
         .upsert(master.departments.map(name=>({name,active:true})),{onConflict:"name",ignoreDuplicates:true});
@@ -167,6 +180,7 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
       const { data: departments, error: departmentsError } = await context.supabase.from("departments").select("id,name");
       if (departmentsError) throw departmentsError;
       const deptByName = new Map((departments ?? []).map(d=>[d.name.trim(),d.id]));
+      for (const department of departments ?? []) if (!priorDepartmentNames.has(department.name.trim()) && master.departments.includes(department.name.trim())) createdDeptIds.push(department.id);
       for (const name of master.ownerRoles) {
         const { data: created, error:e } = await context.supabase.from("owner_roles")
           .upsert({name,active:true},{onConflict:"name"}).select("id");
@@ -176,9 +190,11 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
       const { data: roles, error: re } = await context.supabase.from("owner_roles").select("id,name");
       if (re) throw re;
       const roleByName = new Map((roles ?? []).map(o=>[o.name.trim(),o.id]));
+      for (const role of roles ?? []) if (!priorRoleNames.has(role.name.trim()) && master.ownerRoles.includes(role.name.trim())) createdRoleIds.push(role.id);
       const ownerMappings = master.mappings
         .map(m=>({department_id:deptByName.get(m.department),owner_role_id:roleByName.get(m.ownerRole)}))
         .filter(x=>x.department_id&&x.owner_role_id);
+      for (const row of ownerMappings) if (!priorOwnerKeys.has(row.department_id + ":" + row.owner_role_id)) addedOwnerMappings.push(row as {department_id:string;owner_role_id:string});
       if (ownerMappings.length) {
         const {error:e}=await context.supabase.from("department_owner_roles").upsert(ownerMappings as never,{onConflict:"department_id,owner_role_id"});
         if(e) throw e;
@@ -186,6 +202,7 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
       const appRoleMappings = master.appRoleMappings
         .map(m=>({department_id:deptByName.get(m.department),role:m.appRole}))
         .filter(x=>x.department_id);
+      for (const row of appRoleMappings) if (!priorAppKeys.has(row.department_id + ":" + row.role)) addedAppRoleMappings.push(row as {department_id:string;role:string});
       if (appRoleMappings.length) {
         const {error:e}=await context.supabase.from("department_app_roles").upsert(appRoleMappings as never,{onConflict:"department_id,role"});
         if(e) throw e;
