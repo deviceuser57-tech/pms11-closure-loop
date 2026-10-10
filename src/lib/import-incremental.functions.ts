@@ -173,12 +173,6 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
     };
 
     try {
-      const { data: priorDepartments, error: priorDepartmentsError } = await context.supabase.from("departments").select("id,name");
-      if (priorDepartmentsError) throw priorDepartmentsError;
-      const priorDepartmentNames = new Set((priorDepartments ?? []).map(d => d.name.trim()));
-      const { data: priorRoles, error: priorRolesError } = await context.supabase.from("owner_roles").select("id,name");
-      if (priorRolesError) throw priorRolesError;
-      const priorRoleNames = new Set((priorRoles ?? []).map(r => r.name.trim()));
       const { data: priorOwnerMappings, error: priorOwnerMappingsError } = await context.supabase.from("department_owner_roles").select("department_id,owner_role_id");
       if (priorOwnerMappingsError) throw priorOwnerMappingsError;
       const priorOwnerKeys = new Set((priorOwnerMappings ?? []).map(r => r.department_id + ":" + r.owner_role_id));
