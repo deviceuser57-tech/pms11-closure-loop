@@ -19,7 +19,7 @@ export const SHEET_ENTITY: Record<string, string> = {
 
 /** Relationship-register sheets: stored in record_links, NOT duplicated into records. */
 export const RELATIONSHIP_SHEETS = [
-  "Relationships", "Gap_WPS", "RULE_WPS_MAP", "Dependencies",
+  "Relationships", "Gap_WPS", "RULE_WPS_MAP", "Dependencies", "DEPARTMENT_ASSIGNMENTS",
 ] as const;
 
 /** Governance/reference sheets consumed into governed tables or reference storage. */
@@ -40,13 +40,13 @@ export const OPERATIONAL_EXTRA_SHEETS: Record<string, string> = {
 
 /** Sheets preserved as historical diagnostics only — never treated as current findings. */
 export const DIAGNOSTIC_SHEETS = [
-  "MIGRATION_ISSUES", "REDTEAM_RESULTS", "REDTEAM_HISTORY", "WORKSTREAM_REDTEAM",
+  "MIGRATION_ISSUES", "REDTEAM_RESULTS", "REDTEAM_HISTORY", "WORKSTREAM_REDTEAM", "RELATIONSHIP_REGISTER_Rev1",
   "MASTER_DATA_REVIEW", "MASTER_DATA_AUDIT", "QA_REPORT", "OPEN_FIRST",
 ] as const;
 
 /** Derived/presentation or documentation sheets — no database destination. */
 export const PRESENTATION_SHEETS = [
-  "START_HERE", "MASTER_DATA_GUIDE", "DASHBOARD", "CONFIG", "DATA_DICTIONARY",
+  "START_HERE", "MASTER_DATA_GUIDE", "DASHBOARD", "CONFIG", "DATA_DICTIONARY", "ENTITY_REGISTER",
   "POWERPIVOT_RELATIONS", "POWERPIVOT_STATUS", "POWERPIVOT_GUIDE", "DROPDOWN_MAP",
   "CREW_HELI_ACCOM_DASH", "CREW_HELI_ACCOM_GUIDE", "WORKSTREAM_CONTROL",
   "LISTS", "OPEN_DECISIONS", "VALIDATION_RULES",
