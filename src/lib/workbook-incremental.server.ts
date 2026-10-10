@@ -441,9 +441,9 @@ export type MasterData = { departments:string[]; ownerRoles:string[]; mappings:A
 /**
  * MASTER_DATA is a wide governed-lists sheet (one column per controlled list),
  * NOT one row per department. Departments/Owner roles are the distinct non-empty
- * values of their columns; every other column becomes a controlled list.
- * Application-role mappings exist only if an explicit valid role column is present —
- * never inferred from operational roles.
+ * values of their columns; unrelated vocabulary columns become controlled lists.
+ * Owner mappings come only from explicit Rev.1 mapping columns, and application-role
+ * mappings require a valid explicit app-role value — never inferred from owner roles.
  */
 export function parseMasterData(buffer: ArrayBuffer): MasterData {
   const wb = xlsx.read(new Uint8Array(buffer), { cellDates:true, raw:true });
