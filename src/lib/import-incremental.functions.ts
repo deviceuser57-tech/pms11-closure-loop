@@ -243,14 +243,26 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
       ].map(l => ({ ...l, target_entity: l.target_entity || inferTargetEntity(l.target_rid), source_field: l.source_field || "" }))
         .filter(l => l.target_rid);
       const linkRows = dedupeLinks(allLinks).map(toLinkRow);
+      const { data: existingLinkRows, error: existingLinksError } = await context.supabase.from("record_links").select("*");
+      if (existingLinksError) throw existingLinksError;
+      const existingLinkByKey = new Map((existingLinkRows ?? []).map(row => [linkKey(row), row as Record<string, unknown>]));
+      const snapshottedLinkIds = new Set<string>();
       let linksWritten = 0;
       for (const batch of chunk(linkRows, 500)) {
-        const { data: ins, error: le } = await context.supabase.from("record_links")
+        const { data: savedLinks, error: le } = await context.supabase.from("record_links")
           .upsert(batch as never, { onConflict: "source_entity,source_rid,target_entity,target_rid,link_type,source_sheet,source_field" })
-          .select("id");
+          .select("*");
         if (le) throw new Error("record_links: " + le.message);
-        linksWritten += ins?.length ?? batch.length;
-        for (const row of ins ?? []) writtenLinkIds.push(row.id);
+        linksWritten += savedLinks?.length ?? batch.length;
+        for (const row of savedLinks ?? []) {
+          const key = linkKey(row);
+          const previous = existingLinkByKey.get(key);
+          if (!previous) writtenLinkIds.push(row.id);
+          else if (!snapshottedLinkIds.has(row.id)) {
+            updatedLinkSnapshots.push(previous);
+            snapshottedLinkIds.add(row.id);
+          }
+        }
       }
 
       // 4. Department assignments from the explicit assignment register or fallback field.
@@ -320,6 +332,10 @@ const inferTargetEntity = (rid: string): string => {
 };
 
 type LinkInput = { source_entity:string; source_rid:string; target_entity:string; target_rid:string; link_type:string; role?:string|null; lag_days?:number|null; status?:string|null; source_sheet:string; source_field:string; notes?:string|null };
+const linkKey = (l: Record<string, unknown>) =>
+  [l.source_entity,l.source_rid,l.target_entity,l.target_rid,l.link_type,l.source_sheet,l.source_field]
+    .map(v => String(v ?? "")).join("|");
+
 const dedupeLinks = (links: LinkInput[]) => {
   const seen = new Set<string>();
   return links.filter(l => {
