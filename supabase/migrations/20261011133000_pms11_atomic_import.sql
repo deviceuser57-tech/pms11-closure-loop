@@ -172,7 +172,8 @@ begin
   on conflict (record_id, department_id) do update set
     role = excluded.role,
     source_sheet = excluded.source_sheet,
-    notes = excluded.notes;
+    notes = excluded.notes
+  where public.record_departments.source_sheet in ('workbook','DEPARTMENT_ASSIGNMENTS');
   get diagnostics v_assignments = row_count;
 
   v_summary := coalesce(p_summary, '{}'::jsonb) || jsonb_build_object(
