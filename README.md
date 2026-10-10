@@ -55,7 +55,7 @@ npm run dev
 
 ## PMS-11 source-driven workbook workflow
 
-The authoritative operational source is `PMS11_MASTER_DATA_Rev.2.xlsx` (56 worksheets). `MASTER_DATA` and `LISTS` remain governed vocabulary sources. The import contract explicitly classifies operational sheets, typed relationship registers, governance/reference sheets, diagnostics, and presentation sheets. `Relationships` is the broad relationship source; `RELATIONSHIP_REGISTER_Rev1` is a derived validation mirror and must not be ingested again. `DEPARTMENT_ASSIGNMENTS`, `Gap_WPS`, `RULE_WPS_MAP`, and `Dependencies` are parsed as typed relationship/assignment sources. The workbook is not an already-built Power Pivot model; live Excel/VBA setup must be separately verified. 
+The authoritative operational source is `PMS11_MASTER_DATA_Rev.2.xlsx` (56 worksheets). `MASTER_DATA` and `LISTS` remain governed vocabulary sources. The import contract explicitly classifies operational sheets, typed relationship registers, governance/reference sheets, diagnostics, and presentation sheets. `Relationships` is the broad explicit relationship source. `RELATIONSHIP_REGISTER_Rev1` contributes only validated supplemental multi-value edges; its explicit mirror rows and broken-reference rows are skipped, and endpoint/type deduplication prevents duplicate edge ingestion. `DEPARTMENT_ASSIGNMENTS`, `Gap_WPS`, `RULE_WPS_MAP`, and `Dependencies` are parsed as typed relationship/assignment sources. The workbook is not an already-built Power Pivot model; live Excel/VBA setup must be separately verified. 
 
 Before local verification, place the workbook at any accessible path and generate the application seed:
 
