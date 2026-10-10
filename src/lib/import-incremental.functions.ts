@@ -204,7 +204,7 @@ const linkKey = <T extends {source_entity?:unknown;source_rid?:unknown;target_en
     .map(v => String(v ?? "")).join("|");
 
 const dedupeLinks = (links: LinkInput[]) => {
-  const endpointKey = (l: LinkInput) => \`\${l.source_entity}|\${l.source_rid}|\${l.target_entity}|\${l.target_rid}\`;
+  const endpointKey = (l: LinkInput) => [l.source_entity,l.source_rid,l.target_entity,l.target_rid].join("|");
   const typedPairs = new Set(links.filter(l => l.link_type !== "REGISTERED").map(endpointKey));
   const specificPairs = new Set(links.filter(l => l.link_type !== "REGISTERED" && l.link_type !== "DERIVED_FROM_SOURCE_FIELD").map(endpointKey));
   const seen = new Set<string>();
@@ -217,7 +217,7 @@ const dedupeLinks = (links: LinkInput[]) => {
     seen.add(key);
     return true;
   });
-}
+};
 const toLinkRow = (l: LinkInput) => ({
   source_entity: l.source_entity, source_rid: l.source_rid,
   target_entity: l.target_entity, target_rid: l.target_rid,
