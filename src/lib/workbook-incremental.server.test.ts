@@ -77,7 +77,7 @@ describe("PMS11 Rev.2 workbook contract", () => {
     });
     const links = parseRelationshipLinks(buffer);
     expect(links.some(l => l.source_sheet === "Gap_WPS" && l.link_type === "RELATED_TO_WPS")).toBe(true);
-    expect(links.some(l => l.source_sheet === "RULE_WPS_MAP" && l.link_type === "PRIMARY" && l.status === "Approved")).toBe(true);
+    expect(links.some(l => l.source_sheet === "RULE_WPS_MAP" && l.link_type === "APPLIES_TO_WPS" && l.role === "primary" && l.status === "Approved")).toBe(true);
     expect(links.some(l => l.source_sheet === "RELATIONSHIP_REGISTER_Rev1" && l.link_type === "DERIVED_FROM_SOURCE_FIELD" && l.source_entity === "crew_requirement" && l.target_entity === "crew_role")).toBe(true);
     expect(links.some(l => l.source_rid === "CR-2")).toBe(false);
     expect(links.some(l => l.source_sheet === "RELATIONSHIP_REGISTER_Rev1" && l.link_type === "REGISTERED")).toBe(false);
