@@ -286,10 +286,12 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
       const uniqueAssignments = [...new Map(assignmentRows.map(row => [row.record_id + ":" + row.department_id, row])).values()];
       let deptAssignments = 0;
       for (const batch of chunk(uniqueAssignments, 500)) {
-        const { error: rde } = await context.supabase.from("record_departments")
-          .upsert(batch as never, { onConflict: "record_id,department_id", ignoreDuplicates: true });
+        const { data: savedAssignments, error: rde } = await context.supabase.from("record_departments")
+          .upsert(batch as never, { onConflict: "record_id,department_id", ignoreDuplicates: true })
+          .select("record_id,department_id");
         if (rde) throw new Error("record_departments: " + rde.message);
-        deptAssignments += batch.length;
+        addedDepartmentAssignments.push(...(savedAssignments ?? []).map(row => ({record_id:row.record_id,department_id:row.department_id})));
+        deptAssignments += savedAssignments?.length ?? 0;
       }
 
       // 5. Audit the full run.
@@ -332,16 +334,20 @@ const inferTargetEntity = (rid: string): string => {
 };
 
 type LinkInput = { source_entity:string; source_rid:string; target_entity:string; target_rid:string; link_type:string; role?:string|null; lag_days?:number|null; status?:string|null; source_sheet:string; source_field:string; notes?:string|null };
-const linkKey = (l: Record<string, unknown>) =>
+const linkKey = <T extends {source_entity?:unknown;source_rid?:unknown;target_entity?:unknown;target_rid?:unknown;link_type?:unknown;source_sheet?:unknown;source_field?:unknown}>(l: T) =>
   [l.source_entity,l.source_rid,l.target_entity,l.target_rid,l.link_type,l.source_sheet,l.source_field]
     .map(v => String(v ?? "")).join("|");
 
 const dedupeLinks = (links: LinkInput[]) => {
+  const endpointKey = (l: LinkInput) => `${l.source_entity}|${l.source_rid}|${l.target_entity}|${l.target_rid}`;
+  const typedPairs = new Set(links.filter(l => l.link_type !== "REGISTERED").map(endpointKey));
   const seen = new Set<string>();
   return links.filter(l => {
-    const k = `${l.source_entity}|${l.source_rid}|${l.target_entity}|${l.target_rid}|${l.link_type}|${l.source_sheet}|${l.source_field}`;
+    if (l.link_type === "REGISTERED" && typedPairs.has(endpointKey(l))) return false;
+    const k = linkKey(l);
     if (seen.has(k)) return false;
-    seen.add(k); return true;
+    seen.add(k);
+    return true;
   });
 };
 const toLinkRow = (l: LinkInput) => ({
