@@ -67,7 +67,7 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
       else {
         const next = wb.toDbRecord(r);
         const sourceChanged = JSON.stringify((old as Record<string,unknown>).data ?? {}) !== JSON.stringify(r.data ?? {});
-        const comparable = ["title","description","wps_id","gate_id","parent_id","status","owner","reviewer","approver","due_date","expiry_date","criticality","applicability","evidence_ids","acceptance_ids","rule_ids","links","doc_number","revision","issuer","department"];
+        const comparable = ["title","description","wps_id","gate_id","parent_id","status","owner","reviewer","approver","due_date","expiry_date","criticality","applicability","evidence_ids","acceptance_ids","rule_ids","links","doc_number","revision","issuer","doc_source","department"];
         const diff = sourceChanged ? comparable.filter(k => JSON.stringify((old as Record<string,unknown>)[k] ?? null) !== JSON.stringify((next as Record<string,unknown>)[k] ?? null)) : [];
         if (!diff.length) unchanged.push({ entity:r.entity, rid:r.rid });
         else changed.push({ entity:r.entity, rid:r.rid, title:r.title, fields:diff });
