@@ -106,6 +106,7 @@ describe("PMS11 Rev.2 workbook contract", () => {
   });
 });
 
+describe("MASTER_DATA governance", () => {
   it("does not zip independent MASTER_DATA lists into invented governance mappings", () => {
     const buffer = workbookBuffer({
       MASTER_DATA: [
@@ -124,6 +125,7 @@ describe("PMS11 Rev.2 workbook contract", () => {
     expect(master.departments).not.toContain("OPEN DECISION");
     expect(master.ownerRoles).not.toContain("OPEN DECISION");
   });
+});
 
 describe("import safety regression guards", () => {
   it("keeps workbook preview free of database mutation calls", () => {
