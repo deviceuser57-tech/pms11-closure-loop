@@ -374,12 +374,13 @@ export function parseRelationshipLinks(buffer: ArrayBuffer): WorkbookLink[] {
     for (const r of rows) {
       const ruleId = norm(r["Rule ID"]), wpsId = norm(r["WPS ID"]);
       if (!ruleId || !wpsId) continue;
-      const mapping = norm(r["Mapping Type"]).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
+      const mapping = norm(r["Mapping Type"]).toLowerCase();
+      const role = mapping.includes("supporting") ? "supporting" : mapping.includes("primary") ? "primary" : null;
       out.push({
         source_entity: "rule", source_rid: ruleId, target_entity: "wps", target_rid: wpsId,
-        link_type: mapping || "APPLIES_TO_WPS", source_sheet: "RULE_WPS_MAP",
+        link_type: "APPLIES_TO_WPS", role, source_sheet: "RULE_WPS_MAP",
         source_field: norm(r["Mapping ID"]) || "Rule ID/WPS ID",
-        status: norm(r["Approval Status"]) || null, notes: norm(r["Comments"]) || null,
+        status: norm(r["Approval Status"]) || null, notes: norm(r["Comments"]) || mapping || null,
       });
     }
   }
