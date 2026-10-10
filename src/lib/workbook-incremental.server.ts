@@ -305,14 +305,15 @@ export function parseDependencyLinks(buffer: ArrayBuffer): WorkbookLink[] {
     const pred = typeof r["Predecessor ID"] === "string" ? (r["Predecessor ID"] as string).trim() : "";
     const succ = typeof r["Successor ID"] === "string" ? (r["Successor ID"] as string).trim() : "";
     if (!pred || !succ) continue;
+    const relationship = typeof r["Relationship"] === "string" ? r["Relationship"].trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "") : "";
     out.push({
-      source_entity: "dependency", source_rid: String(r["Link ID"] ?? pred + "->" + succ),
-      target_entity: "", target_rid: succ, link_type: "DEPENDS_ON",
+      source_entity: inferEntityFromId(pred), source_rid: pred,
+      target_entity: inferEntityFromId(succ), target_rid: succ,
+      link_type: relationship || "DEPENDS_ON",
       lag_days: typeof r["Lag Days"] === "number" ? r["Lag Days"] : null,
       status: typeof r["Validation Status"] === "string" ? r["Validation Status"] : null,
       notes: typeof r["Rationale"] === "string" ? r["Rationale"] : null,
-      source_sheet: "Dependencies", source_field: `Predecessor ${pred} (${String(r["Relationship"] ?? "")})`,
-    });
+      source_sheet: "Dependencies", source_field: String(r["Link ID"] ?? "Predecessor ID/Successor ID"),;
   }
   return out;
 }
@@ -376,6 +377,19 @@ export function parseRelationshipLinks(buffer: ArrayBuffer): WorkbookLink[] {
   }
   return out;
 }
+
+const inferEntityFromId = (rid: string): string => {
+  if (/^WPS[-_]/i.test(rid)) return "wps";
+  if (/^GATE[-_]/i.test(rid)) return "gate";
+  if (/^ACT[-_]/i.test(rid)) return "activity";
+  if (/^DEL[-_]/i.test(rid)) return "deliverable";
+  if (/^TASK[-_]/i.test(rid) || /^T[-_]/i.test(rid)) return "task";
+  if (/^GAP[-_]/i.test(rid) || /^G[-_]/i.test(rid)) return "gap";
+  if (/^AC[-_]/i.test(rid)) return "acceptance";
+  if (/^E[-_]/i.test(rid)) return "evidence";
+  if (/^R[-_]/i.test(rid)) return "rule";
+  return "";
+};
 
 export function toDbRecord(r: WorkbookRecord) {
   return {
