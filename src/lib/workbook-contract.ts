@@ -19,7 +19,7 @@ export const SHEET_ENTITY: Record<string, string> = {
 
 /** Relationship-register sheets: stored in record_links, NOT duplicated into records. */
 export const RELATIONSHIP_SHEETS = [
-  "Relationships", "Gap_WPS", "RULE_WPS_MAP", "Dependencies", "DEPARTMENT_ASSIGNMENTS",
+  "Relationships", "Gap_WPS", "RULE_WPS_MAP", "Dependencies", "DEPARTMENT_ASSIGNMENTS", "RELATIONSHIP_REGISTER_Rev1",
 ] as const;
 
 /** Governance/reference sheets consumed into governed tables or reference storage. */
@@ -40,7 +40,7 @@ export const OPERATIONAL_EXTRA_SHEETS: Record<string, string> = {
 
 /** Sheets preserved as historical diagnostics only — never treated as current findings. */
 export const DIAGNOSTIC_SHEETS = [
-  "MIGRATION_ISSUES", "REDTEAM_RESULTS", "REDTEAM_HISTORY", "WORKSTREAM_REDTEAM", "RELATIONSHIP_REGISTER_Rev1",
+  "MIGRATION_ISSUES", "REDTEAM_RESULTS", "REDTEAM_HISTORY", "WORKSTREAM_REDTEAM",
   "MASTER_DATA_REVIEW", "MASTER_DATA_AUDIT", "QA_REPORT", "OPEN_FIRST",
 ] as const;
 
