@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import fs from "node:fs";
+import { readFileSync } from "node:fs";
 import * as xlsx from "xlsx";
 import {
   parseDepartmentAssignments,
@@ -127,7 +127,7 @@ describe("PMS11 Rev.2 workbook contract", () => {
 
 describe("import safety regression guards", () => {
   it("keeps workbook preview free of database mutation calls", () => {
-    const source = fs.readFileSync(new URL("./import-incremental.functions.ts", import.meta.url), "utf8");
+    const source = readFileSync(new URL("./import-incremental.functions.ts", import.meta.url), "utf8");
     const previewStart = source.indexOf("export const previewWorkbookIncremental");
     const importStart = source.indexOf("export const runWorkbookIncremental");
     expect(previewStart).toBeGreaterThanOrEqual(0);
