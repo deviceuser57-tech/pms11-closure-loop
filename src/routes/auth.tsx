@@ -29,7 +29,9 @@ function AuthPage() {
   const [demoStarting, setDemoStarting] = useState(false);
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
-  const [mode, setMode] = useState<"in" | "up">("in");
+
+  const [department, setDepartment] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -92,20 +94,28 @@ function AuthPage() {
 
     try {
       if (mode === "in") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: pw,
-        });
+        if (mode === "in") {
+          const { error } = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password: pw,
+          });
 
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: pw,
-        });
+          if (error) throw error;
+        } else {
+          const { data: signUpData, error } = await supabase.auth.signUp({
+            email: email.trim(),
+            password: pw,
+          });
 
-        if (error) throw error;
-      }
+          if (error) throw error;
+          // Update profile with department if provided
+          if (department && signUpData?.user?.id) {
+            await supabase
+              .from("profiles")
+              .update({ department, employee_id: employeeId })
+              .eq("id", signUpData.user.id);
+          }
+        }
 
       const { data, error: sessionError } = await supabase.auth.getSession();
 
@@ -225,13 +235,20 @@ function AuthPage() {
               <Input
                 id="auth-password"
                 type="password"
-                autoComplete={mode === "in" ? "current-password" : "new-password"}
-                required
-                minLength={6}
-                value={pw}
+
+
+
+
                 onChange={(e) => setPw(e.target.value)}
                 disabled={busy}
               />
+            <div className="space-y-1">
+              <Label htmlFor="auth-department" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Department *</Label>
+              <Input id="auth-department" type="text" value={department} onChange={(e) => setDepartment(e.target.value)} disabled={busy} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="auth-employee-id" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Employee ID *</Label>
+              <Input id="auth-employee-id" type="text" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} disabled={busy} />
             </div>
 
             <Button type="submit" className="w-full" disabled={busy}>
