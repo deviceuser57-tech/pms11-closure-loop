@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ShieldCheck, Plus, Pencil, Trash2, BookOpen, RefreshCw } from "lucide-react";
+import { ShieldCheck, Plus, Pencil, Trash2, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Tables } from "@/integrations/supabase/types";
-import { wpsRelationshipCounts, useRecords } from "@/lib/records";
+import { useRecords } from "@/lib/records";
+import { Pms11AdminControls } from "@/components/admin/Pms11AdminControls";
 
 const ROLES = ["admin", "reviewer", "contributor", "viewer"] as const;
 type Role = typeof ROLES[number];
@@ -64,6 +65,49 @@ export const Route = createFileRoute("/_authenticated/admin/users")({
   component: UsersAdmin,
 });
 
+function DepartmentOwnerRoleMatrix() {
+  const { isAdmin } = useAuth();
+  const q = useQuery({
+    queryKey: ["department-owner-role-matrix"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const [{ data: departments, error: de }, { data: roles, error: re }, { data: links, error: le }] = await Promise.all([
+        supabase.from("departments").select("id,name,active").eq("active", true).order("name"),
+        supabase.from("owner_roles").select("id,name,active").eq("active", true).order("name"),
+        supabase.from("department_owner_roles").select("department_id,owner_role_id"),
+      ]);
+      if (de) throw de; if (re) throw re; if (le) throw le;
+      return { departments: departments ?? [], roles: roles ?? [], links: links ?? [] };
+    },
+  });
+  const [selected, setSelected] = useState("");
+  const [saving, setSaving] = useState(false);
+  if (!isAdmin) return null;
+  const data = q.data;
+  const currentDepartment = data?.departments.find((d: any) => d.id === selected);
+  const linked = new Set((data?.links ?? []).filter((x: any) => x.department_id === selected).map((x: any) => x.owner_role_id));
+  const toggle = async (roleId: string, checked: boolean) => {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      const result = checked
+        ? await supabase.from("department_owner_roles").insert({ department_id: selected, owner_role_id: roleId } as never)
+        : await supabase.from("department_owner_roles").delete().eq("department_id", selected).eq("owner_role_id", roleId);
+      if (result.error) throw result.error;
+      await q.refetch();
+      toast.success(checked ? "Owner role linked to department." : "Owner role unlinked.");
+    } catch (e) { toast.error(e instanceof Error ? e.message : String(e)); }
+    finally { setSaving(false); }
+  };
+  return <section className="maritime-card overflow-hidden">
+    <div className="border-b border-border p-5"><p className="label-caps">Master data</p><h2 className="font-display text-2xl">Department → Owner Roles</h2><p className="mt-1 text-sm text-muted-foreground">Owner means a job/position, not a person. Select a Department and assign only the Owner Roles valid for that department. These mappings drive cascading Department → Owner dropdowns.</p></div>
+    <div className="grid gap-5 p-5 md:grid-cols-[280px_1fr]">
+      <div className="space-y-2"><label className="label-caps">Department</label><Select value={selected} onValueChange={setSelected}><SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger><SelectContent>{(data?.departments ?? []).map((d: any)=><SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent></Select>{currentDepartment && <p className="text-xs text-muted-foreground">Mapped Owner Roles: {linked.size}</p>}</div>
+      <div><p className="label-caps mb-2">Owner Roles for selected Department</p>{!selected ? <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">Select a Department first.</p> : <div className="grid gap-2 sm:grid-cols-2">{(data?.roles ?? []).map((role: any)=><label key={role.id} className="flex items-center gap-2 rounded-md border border-border p-2 text-sm hover:bg-accent"><input type="checkbox" checked={linked.has(role.id)} disabled={saving} onChange={e=>toggle(role.id,e.target.checked)} />{role.name}</label>)}</div>}</div>
+    </div>
+  </section>;
+}
+
 function Tick({ yes }: { yes: boolean }) {
   return yes
     ? <span className="text-success font-bold text-base">✓</span>
@@ -94,7 +138,6 @@ function UsersAdmin() {
   });
 
   const [saving, setSaving] = useState<string | null>(null);
-  const [wpsDepartment, setWpsDraft] = useState<Record<string, string>>({});
   const [quorumDraft, setQuorumDraft] = useState<Record<string, string>>({});
 
   if (loading) return <p className="text-sm text-muted-foreground">Checking permissions…</p>;
@@ -127,20 +170,6 @@ function UsersAdmin() {
     finally { setSaving(null); }
   };
 
-  const setWpsDepartment = async (wpsRid: string, department: string) => {
-    const value = department.trim();
-    if (!value) { toast.error("Enter a department before assigning the WPS."); return; }
-    setSaving("wps:" + wpsRid);
-    try {
-      const { data, error } = await supabase.rpc("set_wps_department" as never, { _wps_rid: wpsRid, _department: value } as never);
-      if (error) throw error;
-      setWpsDraft(prev => ({ ...prev, [wpsRid]: value }));
-      await records.refetch();
-      toast.success(`${wpsRid} assigned to ${value}. ${data ?? 0} linked records updated.`);
-    } catch (e) { toast.error(e instanceof Error ? e.message : String(e)); }
-    finally { setSaving(null); }
-  };
-
   const saveQuorum = async (gateRid: string, quorum: number) => {
     if (quorum < 1 || quorum > 10) { toast.error("Quorum must be between 1 and 10."); return; }
     setSaving("quorum:" + gateRid);
@@ -155,7 +184,6 @@ function UsersAdmin() {
     finally { setSaving(null); }
   };
 
-  const workbookWps = records.of("wps").filter(r => r.source_kind === "imported").sort((a, b) => a.rid.localeCompare(b.rid));
   const gates = records.of("gate").sort((a, b) => a.rid.localeCompare(b.rid));
   const departments = [...new Set([
     ...records.all.map(r => r.department),
@@ -169,6 +197,8 @@ function UsersAdmin() {
         <h1 className="font-display text-3xl font-semibold">Admin Console</h1>
         <p className="text-sm text-muted-foreground">Admin sees the full PMS-11 dataset. Department users are restricted at database/RLS level to records explicitly assigned to their department.</p>
       </header>
+
+      <Pms11AdminControls />
 
       {/* ── Permission Matrix ──────────────────────────────────────────────── */}
       <section className="maritime-card overflow-hidden">
@@ -265,52 +295,8 @@ function UsersAdmin() {
         </div>
       </section>
 
-      {/* ── WPS Control Matrix ─────────────────────────────────────────────── */}
-      <section className="maritime-card overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="label-caps">WPS relationship control</p>
-            <h2 className="font-display text-2xl">Dynamic WPS Control Matrix</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Live counts resolved from imported workbook records. Assigning a WPS department cascades to all linked records.</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => records.refetch()} disabled={records.isFetching}>
-            <RefreshCw className={"mr-1 h-4 w-4 " + (records.isFetching ? "animate-spin" : "")} />Refresh
-          </Button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="label-caps px-4 py-3 text-left">WPS</th>
-                {WPS_COUNT_COLUMNS.map(([key, label]) => <th key={key} className="label-caps px-4 py-3 text-center">{label}</th>)}
-                <th className="label-caps px-4 py-3 text-left">Department</th>
-              </tr>
-            </thead>
-            <tbody>
-              {workbookWps.map(wps => {
-                const c = wpsRelationshipCounts(wps, records.all);
-                return (
-                  <tr key={wps.rid} className="border-b border-border/50 last:border-0 hover:bg-accent/30">
-                    <td className="px-4 py-3">
-                      <Link to="/r/$entity" params={{ entity: "wps" }} className="font-mono font-semibold text-primary hover:underline">{wps.rid}</Link>
-                    </td>
-                    {WPS_COUNT_COLUMNS.map(([key]) => <td key={key} className="px-4 py-3 text-center font-mono tabular-nums">{c[key as keyof typeof c]}</td>)}
-                    <td className="px-4 py-2">
-                      <div className="flex min-w-[280px] gap-2">
-                        <Input value={wpsDepartment[wps.rid] ?? wps.department ?? ""} placeholder="Department" onChange={e => setWpsDraft(prev => ({ ...prev, [wps.rid]: e.target.value }))} />
-                        <Button size="sm" variant="outline" disabled={saving === "wps:" + wps.rid} onClick={() => setWpsDepartment(wps.rid, wpsDepartment[wps.rid] ?? wps.department ?? "")}>Assign</Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="border-t border-border bg-muted/20 px-5 py-3 text-xs text-muted-foreground">
-          {records.isLoading ? "Loading workbook relationships…" : `${workbookWps.length} imported WPS shown. Assigning a WPS department cascades scope to linked records. Derived WPS-25 to WPS-27 are excluded from the 24-WPS workbook control matrix.`}
-        </div>
-      </section>
+      {/* ── Department → Owner Role master relationship ───────────────────── */}
+      <DepartmentOwnerRoleMatrix />
 
       {/* ── Record Administration ──────────────────────────────────────────── */}
       <section className="maritime-card p-5 space-y-4">

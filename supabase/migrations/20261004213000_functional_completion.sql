@@ -59,3 +59,51 @@ where t.id=q.id and cardinality(q.ids)>0;
 
 -- Keep the scheduled/manual expiry operation available to Admins.
 alter function public.expire_evidence() set search_path = public;
+
+
+-- PMS-11 governed Department -> Owner Role relationship.
+-- Owner means a job/position (e.g. Chief Engineer), never a person.
+create table if not exists public.departments (
+  id uuid primary key default gen_random_uuid(), name text not null unique,
+  active boolean not null default true, created_at timestamptz not null default now()
+);
+create table if not exists public.owner_roles (
+  id uuid primary key default gen_random_uuid(), name text not null unique,
+  active boolean not null default true, created_at timestamptz not null default now()
+);
+create table if not exists public.department_owner_roles (
+  department_id uuid not null references public.departments(id) on delete cascade,
+  owner_role_id uuid not null references public.owner_roles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (department_id, owner_role_id)
+);
+create index if not exists idx_department_owner_roles_owner on public.department_owner_roles(owner_role_id);
+
+alter table public.departments enable row level security;
+alter table public.owner_roles enable row level security;
+alter table public.department_owner_roles enable row level security;
+drop policy if exists "authenticated read departments" on public.departments;
+create policy "authenticated read departments" on public.departments for select to authenticated using (true);
+drop policy if exists "admins manage departments" on public.departments;
+create policy "admins manage departments" on public.departments for all to authenticated using (public.has_role(auth.uid(),'admin')) with check (public.has_role(auth.uid(),'admin'));
+drop policy if exists "authenticated read owner roles" on public.owner_roles;
+create policy "authenticated read owner roles" on public.owner_roles for select to authenticated using (true);
+drop policy if exists "admins manage owner roles" on public.owner_roles;
+create policy "admins manage owner roles" on public.owner_roles for all to authenticated using (public.has_role(auth.uid(),'admin')) with check (public.has_role(auth.uid(),'admin'));
+drop policy if exists "authenticated read department owner roles" on public.department_owner_roles;
+create policy "authenticated read department owner roles" on public.department_owner_roles for select to authenticated using (true);
+drop policy if exists "admins manage department owner roles" on public.department_owner_roles;
+create policy "admins manage department owner roles" on public.department_owner_roles for all to authenticated using (public.has_role(auth.uid(),'admin')) with check (public.has_role(auth.uid(),'admin'));
+
+-- Preserve existing vocabulary only; no departments/roles are invented.
+insert into public.departments(name)
+select distinct trim(department) from public.records where coalesce(trim(department),'') <> '' on conflict (name) do nothing;
+insert into public.departments(name)
+select distinct trim(department) from public.profiles where coalesce(trim(department),'') <> '' on conflict (name) do nothing;
+insert into public.owner_roles(name)
+select distinct trim(owner) from public.records
+where coalesce(trim(owner),'') <> '' and lower(trim(owner)) not in ('tbc','to be assigned','rule/wps owner') on conflict (name) do nothing;
+insert into public.department_owner_roles(department_id, owner_role_id)
+select distinct d.id, o.id from public.records r
+join public.departments d on d.name=trim(r.department) join public.owner_roles o on o.name=trim(r.owner)
+where coalesce(trim(r.department),'') <> '' and coalesce(trim(r.owner),'') <> '' on conflict do nothing;

@@ -11,35 +11,84 @@ export const previewWorkbookIncremental = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Only Admins can preview workbook updates.");
 
-    const { parseWorkbook, toDbRecord } = await import("./workbook-incremental.server");
+    // READ-ONLY PREVIEW: parses and validates the entire workbook and reports the
+    // expected outcome. It performs NO database writes of any kind (governance,
+    // records, relationships, roles, or audit).
+    const wb = await import("./workbook-incremental.server");
     const bytes = Uint8Array.from(Buffer.from(data.base64, "base64"));
-    const incoming = parseWorkbook(bytes.buffer);
-    const { data: existing, error } = await context.supabase
-      .from("records").select("*").eq("source_kind","imported").in("rid", [...new Set(incoming.map(r=>r.rid))]);
-    if (error) throw error;
+    const buffer = bytes.buffer as ArrayBuffer;
+    const parsed = wb.parseWorkbookDetailed(buffer);
+    const incoming = parsed.records;
+    const master = wb.parseMasterData(buffer);
+    const depLinks = wb.parseDependencyLinks(buffer);
+    const relLinks = wb.parseRelationshipLinks(buffer);
+    const departmentAssignments = wb.parseDepartmentAssignments(buffer);
 
+    const { data: existing, error } = await context.supabase
+      .from("records").select("*").eq("source_kind","imported");
+    if (error) throw error;
     const byKey = new Map((existing ?? []).map((r) => [r.entity + ":" + r.rid, r]));
+
+    // Validate references against actual DB state without writing anything.
+    const knownEntityKeys = new Set<string>();
+    for (const r of existing ?? []) knownEntityKeys.add(r.entity + ":" + r.rid);
+    for (const r of incoming) knownEntityKeys.add(r.entity + ":" + r.rid);
+    const invalidRefs: Array<{entity:string;rid:string;ref:string;field:string}> = [];
+    for (const r of incoming) {
+      for (const [field, ids, expected] of [
+        ["rule_ids", r.rule_ids, "rule"],
+        ["evidence_ids", r.evidence_ids, "evidence"],
+        ["acceptance_ids", r.acceptance_ids, "acceptance"],
+      ] as const) {
+        for (const ref of ids ?? []) {
+          if (!knownEntityKeys.has(expected + ":" + ref)) invalidRefs.push({ entity:r.entity, rid:r.rid, ref, field });
+        }
+      }
+    }
+
+    // Governance would-be writes are computed from MASTER_DATA only (no deletes here).
+    const { data: dbDepartments, error: departmentReadError } = await context.supabase.from("departments").select("id,name");
+    if (departmentReadError) throw departmentReadError;
+    const deptByName = new Map((dbDepartments ?? []).map(d=>[d.name.trim(), d.id]));
+    const newDepartments = master.departments.filter(n => !deptByName.has(n));
+    const { data: dbRoles, error: ownerRoleReadError } = await context.supabase.from("owner_roles").select("id,name");
+    if (ownerRoleReadError) throw ownerRoleReadError;
+    const roleNames = new Set((dbRoles ?? []).map(o=>o.name.trim()));
+    const newOwnerRoles = master.ownerRoles.filter(n => !roleNames.has(n));
+
     type DiffRow = { entity: string; rid: string; title?: string; fields?: string[] };
     const added: DiffRow[] = [], changed: DiffRow[] = [], unchanged: DiffRow[] = [], conflicts: DiffRow[] = [];
-
+    const seenKeys = new Set<string>();
     for (const r of incoming) {
-      const old = byKey.get(r.entity + ":" + r.rid);
+      const key = r.entity + ":" + r.rid;
+      if (seenKeys.has(key)) conflicts.push({ entity:r.entity, rid:r.rid, title:"Duplicate ID in workbook" });
+      seenKeys.add(key);
+      const old = byKey.get(key);
       if (!old) added.push({ entity:r.entity, rid:r.rid, title:r.title });
       else {
-        const next = toDbRecord(r);
+        const next = wb.toDbRecord(r);
         const sourceChanged = JSON.stringify((old as Record<string,unknown>).data ?? {}) !== JSON.stringify(r.data ?? {});
-        const comparable = ["title","description","wps_id","gate_id","parent_id","status","owner","reviewer","approver","due_date","expiry_date","criticality","applicability","evidence_ids","acceptance_ids","rule_ids","links","doc_number","revision","issuer"];
+        const comparable = ["title","description","wps_id","gate_id","parent_id","status","owner","reviewer","approver","due_date","expiry_date","criticality","applicability","evidence_ids","acceptance_ids","rule_ids","links","doc_number","revision","issuer","doc_source","department"];
         const diff = sourceChanged ? comparable.filter(k => JSON.stringify((old as Record<string,unknown>)[k] ?? null) !== JSON.stringify((next as Record<string,unknown>)[k] ?? null)) : [];
         if (!diff.length) unchanged.push({ entity:r.entity, rid:r.rid });
         else changed.push({ entity:r.entity, rid:r.rid, title:r.title, fields:diff });
       }
     }
+
     return {
-      workbook:"PMS11_POWERPIVOT_READY.xlsx",
+      workbook:"uploaded workbook",
       candidates:incoming.length,
       added, changed, unchanged, conflicts,
       counts:{ added:added.length, changed:changed.length, unchanged:unchanged.length, conflicts:conflicts.length },
-      note:"Only new and changed workbook records will be applied. Existing execution/review/closure/department fields are preserved.",
+      note:"Preview is read-only: no rows were written. Only new and changed workbook records will be applied on approval. Existing execution/review/closure/department fields are preserved.",
+      masterData:{ departments:master.departments.length, ownerRoles:master.ownerRoles.length, mappings:master.mappings.length, applicationRoleMappings:master.appRoleMappings.length, controlledLists:Object.keys(master.controlledLists).length, newDepartments, newOwnerRoles },
+      relationships:{ derived:parsed.links.length, dependencies:depLinks.length, typedRegisters:relLinks.length, departmentAssignments:departmentAssignments.length, relationshipRegister:parsed.relationshipRegister },
+      unresolvedRefs:{ ambiguous:parsed.ambiguousRefs.slice(0,200), ambiguousTotal:parsed.ambiguousRefs.length, invalid:invalidRefs.slice(0,200), invalidTotal:invalidRefs.length },
+      unknownSheets:parsed.unknownSheets,
+      blockingErrors:[
+        ...(conflicts.length? [`${conflicts.length} duplicate record IDs`] : []),
+        ...(parsed.unknownSheets.length? [`Unrecognized sheets: ${parsed.unknownSheets.join(", ")}`] : []),
+      ],
     };
   });
 
@@ -50,36 +99,127 @@ export const runWorkbookIncremental = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Only Admins can run workbook updates.");
 
-    const { parseWorkbook, toDbRecord } = await import("./workbook-incremental.server");
+    const wb = await import("./workbook-incremental.server");
     const bytes = Uint8Array.from(Buffer.from(data.base64, "base64"));
-    const incoming = parseWorkbook(bytes.buffer);
-    const { data: existing, error } = await context.supabase.from("records").select("*").eq("source_kind","imported");
-    if (error) throw error;
-    const byKey = new Map((existing ?? []).map((r) => [r.entity + ":" + r.rid, r]));
-    const sourceFields = ["entity","rid","title","description","wps_id","gate_id","parent_id","status","owner","reviewer","approver","due_date","expiry_date","criticality","source_kind","applicability","evidence_ids","acceptance_ids","rule_ids","links","doc_number","revision","issuer","data"];
-    let added=0, changed=0, unchanged=0;
-
-    for (const r of incoming) {
-      const next = toDbRecord(r);
-      const old = byKey.get(r.entity + ":" + r.rid);
-      if (!old) {
-        const { error:e } = await context.supabase.from("records").insert(next as never);
-        if (e) throw new Error("Insert " + r.entity + "/" + r.rid + ": " + e.message);
-        added++;
-        continue;
-      }
-      const sourceChanged = JSON.stringify((old as Record<string,unknown>).data ?? {}) !== JSON.stringify(r.data ?? {});
-      if (!sourceChanged) { unchanged++; continue; }
-      const patch = Object.fromEntries(sourceFields.filter(k => k !== "entity" && k !== "rid").map(k => [k,(next as Record<string,unknown>)[k]]));
-      const { error:e } = await context.supabase.from("records").update(patch as never).eq("id",old.id);
-      if (e) throw new Error("Update " + r.entity + "/" + r.rid + ": " + e.message);
-      changed++;
+    const buffer = bytes.buffer as ArrayBuffer;
+    const parsed = wb.parseWorkbookDetailed(buffer);
+    const incoming = parsed.records;
+    const duplicateKeys = new Set<string>();
+    const seenKeys = new Set<string>();
+    for (const record of incoming) {
+      const key = record.entity + ":" + record.rid;
+      if (seenKeys.has(key)) duplicateKeys.add(key);
+      seenKeys.add(key);
+    }
+    if (parsed.unknownSheets.length) {
+      throw new Error("Workbook contains unclassified sheets: " + parsed.unknownSheets.join(", "));
+    }
+    if (duplicateKeys.size) {
+      throw new Error("Workbook contains duplicate entity/record IDs: " + [...duplicateKeys].slice(0, 50).join(", "));
     }
 
+    const master = wb.parseMasterData(buffer);
+    const depLinks = wb.parseDependencyLinks(buffer);
+    const relLinks = wb.parseRelationshipLinks(buffer);
+    const departmentAssignments = wb.parseDepartmentAssignments(buffer);
+    const allLinks = [...parsed.links, ...relLinks, ...depLinks]
+      .map(l => ({ ...l, target_entity: l.target_entity || inferTargetEntity(l.target_rid), source_field: l.source_field || "" }))
+      .filter(l => l.source_entity && l.source_rid && l.target_entity && l.target_rid && l.link_type);
+    const linkRows = dedupeLinks(allLinks).map(toLinkRow);
+
+    const explicitAssignments = departmentAssignments.map(a => ({
+      entity: a.entity,
+      rid: a.rid,
+      department: a.department,
+      role: "primary",
+      source_sheet: a.source_sheet,
+      notes: [
+        a.source_field ? "source_field=" + a.source_field : "",
+        a.source_value ? "source_value=" + a.source_value : "",
+        a.assignment_method ? "method=" + a.assignment_method : "",
+        a.status ? "status=" + a.status : "",
+        a.open_decision ? "open_decision=" + a.open_decision : "",
+      ].filter(Boolean).join("; ") || null,
+    }));
+    const fallbackAssignments = incoming.filter(r => r.department).map(r => ({
+      entity: r.entity, rid: r.rid, department: r.department as string,
+      role: "primary", source_sheet: "workbook", notes: null,
+    }));
+    const assignments = departmentAssignments.length ? explicitAssignments : fallbackAssignments;
+
     const summary = {
-      mode:"incremental", candidates:incoming.length, added, changed, unchanged,
-      preserved:"execution_note, review_status, closure_pct, no_go_active, department and audit history",
+      sourceWorkbook: "PMS11_MASTER_DATA_Rev.2.xlsx",
+      masterData: {
+        departments: master.departments.length,
+        ownerRoles: master.ownerRoles.length,
+        ownerMappings: master.mappings.length,
+        applicationRoleMappings: master.appRoleMappings.length,
+        controlledListCount: Object.keys(master.controlledLists).length,
+        controlledLists: master.controlledLists,
+      },
+      relationships: {
+        derived: parsed.links.length,
+        dependencies: depLinks.length,
+        typedRegisters: relLinks.length,
+        uniqueEdgesSubmitted: linkRows.length,
+      },
+      departmentAssignmentRows: assignments.length,
+      unresolvedRefs: {
+        ambiguous: parsed.ambiguousRefs.length,
+        unknownSheets: parsed.unknownSheets,
+        brokenRelationshipRefs: parsed.relationshipRegister.brokenReferences,
+      },
+      preserved: "execution_note, review_status, closure_pct, no_go_active, user accounts/roles, review/closure/audit history",
     };
-    await context.supabase.from("import_runs").insert({ summary } as never);
-    return summary;
+
+    // A single PostgreSQL RPC makes all governance, record, relationship,
+    // assignment, and audit writes one transaction. Any error rolls back all of it.
+    const { data: result, error } = await context.supabase.rpc("apply_pms11_workbook_import", {
+      p_departments: master.departments,
+      p_owner_roles: master.ownerRoles,
+      p_owner_mappings: master.mappings,
+      p_app_role_mappings: master.appRoleMappings.map(m => ({department:m.department, role:m.appRole})),
+      p_records: incoming.map(wb.toDbRecord) as never,
+      p_links: linkRows,
+      p_department_assignments: assignments,
+      p_summary: summary,
+    });
+    if (error) throw new Error("Workbook import transaction failed: " + error.message);
+    return result;
   });
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+const inferTargetEntity = (rid: string): string => {
+  const m = rid.match(/^([A-Z]+)-/);
+  if (!m) return "";
+  switch (m[1]) {
+    case "R": return "rule"; case "WPS": return "wps"; case "ACT": return "activity"; case "A": return "activity";
+    case "DEL": return "deliverable"; case "TASK": return "task"; case "T": return "task"; case "GAP": return "gap"; case "G": return "gap";
+    case "AC": return "acceptance"; case "E": return "evidence"; case "GATE": return "gate";
+    default: return "";
+  }
+};
+
+type LinkInput = { source_entity:string; source_rid:string; target_entity:string; target_rid:string; link_type:string; role?:string|null; lag_days?:number|null; status?:string|null; source_sheet:string; source_field:string; notes?:string|null };
+const dedupeLinks = (links: LinkInput[]) => {
+  const endpointKey = (l: LinkInput) => [l.source_entity,l.source_rid,l.target_entity,l.target_rid].join("|");
+  const typedPairs = new Set(links.filter(l => l.link_type !== "REGISTERED").map(endpointKey));
+  const specificPairs = new Set(links.filter(l => l.link_type !== "REGISTERED" && l.link_type !== "DERIVED_FROM_SOURCE_FIELD").map(endpointKey));
+  const seen = new Set<string>();
+  return links.filter(l => {
+    const pair = endpointKey(l);
+    if (l.link_type === "REGISTERED" && typedPairs.has(pair)) return false;
+    if (l.link_type === "DERIVED_FROM_SOURCE_FIELD" && specificPairs.has(pair)) return false;
+    const key = pair + "|" + l.link_type;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+const toLinkRow = (l: LinkInput) => ({
+  source_entity: l.source_entity, source_rid: l.source_rid,
+  target_entity: l.target_entity, target_rid: l.target_rid,
+  link_type: l.link_type, role: l.role ?? null, lag_days: l.lag_days ?? null,
+  status: l.status ?? null, source_sheet: l.source_sheet, source_field: l.source_field ?? "",
+  notes: l.notes ?? null,
+});

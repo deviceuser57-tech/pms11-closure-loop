@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Anchor, Loader2 } from "lucide-react";
-import { enterDemoMode } from "@/lib/demo-auth.functions";
+import { beginFirstLogin, activateFirstLogin } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,279 +10,85 @@ import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/auth")({
   staticData: { sitemap: true },
-  head: () => ({
-    meta: [
-      { title: "Test Access — PMS 11 Closure Loop" },
-      {
-        name: "description",
-        content: "Temporary demo access for PMS 11 readiness and closure testing.",
-      },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "PMS 11 Closure Loop — Corporate Login" }, { name: "description", content: "Corporate authentication for PMS 11 Closure Loop." }] }),
   component: AuthPage,
 });
 
 function AuthPage() {
   const nav = useNavigate();
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [demoStarting, setDemoStarting] = useState(false);
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
+  const [busy,setBusy]=useState(false);
+  const [message,setMessage]=useState("");
+  const [email,setEmail]=useState("");
+  const [password,setPassword]=useState("");
+  const [confirm,setConfirm]=useState("");
+  const [firstLogin,setFirstLogin]=useState(false);
+  const [activationPending,setActivationPending]=useState(false);
 
-  const [department, setDepartment] = useState("");
-  const [employeeId, setEmployeeId] = useState("");
-
-  useEffect(() => {
-    let active = true;
-
-    const checkExistingSession = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (!active) return;
-        if (error) {
-          console.warn("[Auth] Session check failed:", error);
-          return;
-        }
-        if (data.session?.user) {
-          await nav({ to: "/dashboard", replace: true });
-        }
-      } catch (error) {
-        console.error("[Auth] Session check exception:", error);
+  useEffect(()=>{
+    let active=true;
+    const boot=async()=>{
+      const params=new URLSearchParams(window.location.search);
+      const requestedFirst=params.get("first")==="1";
+      const {data}=await supabase.auth.getSession();
+      if(!active)return;
+      if(data.session?.user){
+        const {data:profile}=await supabase.from("profiles").select("email,must_change_password").eq("id",data.session.user.id).maybeSingle();
+        if(profile?.must_change_password || requestedFirst){ setEmail(profile?.email ?? data.session.user.email ?? ""); setFirstLogin(true); return; }
+        await nav({to:"/dashboard",replace:true});
       }
     };
+    void boot();
+    return()=>{active=false};
+  },[nav]);
 
-    const startTemporaryDemo = async () => {
-      if (import.meta.env.VITE_PMS11_DEMO_MODE === "false") return;
+  const showError=(e:unknown)=>{const text=e instanceof Error?e.message:String(e);setMessage(text);toast.error(text);};
 
-      setDemoStarting(true);
-
-      try {
-        const redirectTo = new URL("/dashboard", window.location.origin).toString();
-        const { actionLink } = await enterDemoMode({ data: { redirectTo } });
-        window.location.assign(actionLink);
-      } catch (error) {
-        console.error("[Auth] Demo mode failed:", error);
-
-        if (active) {
-          setDemoStarting(false);
-          setMessage(
-            error instanceof Error
-              ? error.message
-              : "Temporary demo mode could not start.",
-          );
-        }
-      }
-    };
-
-    void checkExistingSession().then(() => {
-      if (active) void startTemporaryDemo();
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [nav]);
-
-  const submit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (busy) return;
-
-    setBusy(true);
-    setMessage("");
-
-    try {
-      if (mode === "in") {
-        if (mode === "in") {
-          const { error } = await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password: pw,
-          });
-
-          if (error) throw error;
-        } else {
-          const { data: signUpData, error } = await supabase.auth.signUp({
-            email: email.trim(),
-            password: pw,
-          });
-
-          if (error) throw error;
-          // Update profile with department if provided
-          if (department && signUpData?.user?.id) {
-            await supabase
-              .from("profiles")
-              .update({ department, employee_id: employeeId })
-              .eq("id", signUpData.user.id);
-          }
-        }
-
-      const { data, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError) throw sessionError;
-
-      if (!data.session?.user) {
-        throw new Error(
-          mode === "up"
-            ? "Account created. Check your email to confirm the account before signing in."
-            : "Authentication succeeded, but no active session was created.",
-        );
-      }
-
-      await nav({ to: "/dashboard", replace: true });
-    } catch (error) {
-      console.error("[Auth] Authentication failed:", error);
-
-      const text =
-        error instanceof Error
-          ? error.message
-          : typeof error === "string"
-            ? error
-            : "Authentication failed. Please try again.";
-
-      setMessage(text);
-      toast.error(text);
-    } finally {
-      setBusy(false);
-    }
+  const submitEmail=async(e:FormEvent)=>{
+    e.preventDefault(); if(busy)return;
+    const normalized=email.trim().toLowerCase();
+    if(!normalized.endsWith("@pms.eg")) return showError(new Error("Use your corporate @pms.eg email."));
+    setBusy(true);setMessage("");
+    try{
+      const r=await beginFirstLogin({data:{email:normalized}});
+      if(r.firstLogin && r.actionLink){ setActivationPending(true); window.location.assign(r.actionLink); return; }
+      setActivationPending(false);
+    }catch(err){showError(err)}finally{setBusy(false)}
   };
 
-  const startDemo = async () => {
-    setDemoStarting(true);
-    setMessage("");
-
-    try {
-      const redirectTo = new URL("/dashboard", window.location.origin).toString();
-      const { actionLink } = await enterDemoMode({ data: { redirectTo } });
-      window.location.assign(actionLink);
-    } catch (error) {
-      setDemoStarting(false);
-      const text =
-        error instanceof Error
-          ? error.message
-          : "Temporary demo mode could not start.";
-      setMessage(text);
-      toast.error(text);
-    }
+  const signIn=async(e:FormEvent)=>{
+    e.preventDefault();if(busy)return;setBusy(true);setMessage("");
+    try{
+      const {error}=await supabase.auth.signInWithPassword({email:email.trim().toLowerCase(),password});
+      if(error)throw error;
+      const {data}=await supabase.auth.getUser();
+      const {data:profile}=await supabase.from("profiles").select("must_change_password").eq("id",data.user?.id ?? "").maybeSingle();
+      if(profile?.must_change_password){setFirstLogin(true);return;}
+      await nav({to:"/dashboard",replace:true});
+    }catch(err){showError(err)}finally{setBusy(false)}
   };
 
-  return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="maritime-card w-full max-w-md space-y-6 p-7">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Anchor className="h-6 w-6" />
-          </span>
-          <div>
-            <h1 className="font-display text-2xl font-semibold">
-              PMS 11 Closure Loop
-            </h1>
-            <p className="label-caps">IMO 7511826 · Readiness & closure</p>
-          </div>
-        </div>
+  const setNewPassword=async(e:FormEvent)=>{
+    e.preventDefault();if(busy)return;
+    if(password.length<8)return showError(new Error("Password must be at least 8 characters."));
+    if(password!==confirm)return showError(new Error("Passwords do not match."));
+    setBusy(true);setMessage("");
+    try{
+      const {error}=await supabase.auth.updateUser({password});
+      if(error)throw error;
+      await activateFirstLogin();
+      await nav({to:"/dashboard",replace:true});
+    }catch(err){showError(err)}finally{setBusy(false)}
+  };
 
-        {import.meta.env.VITE_PMS11_DEMO_MODE !== "false" ? (
-          <div className="space-y-3">
-            <div className="rounded-md border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
-              <p className="font-semibold">Temporary Test Mode</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Login and signup are temporarily bypassed. Entering as Demo
-                Admin uses a real Supabase session; database RLS remains enabled.
-              </p>
-            </div>
-
-            <Button
-              type="button"
-              className="w-full"
-              disabled={demoStarting}
-              onClick={() => void startDemo()}
-            >
-              {demoStarting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : null}
-              {demoStarting ? "Entering Demo Admin…" : "Enter as Demo Admin"}
-            </Button>
-          </div>
-        ) : null}
-
-        {import.meta.env.VITE_PMS11_DEMO_MODE === "false" ? (
-          <form onSubmit={submit} className="space-y-3">
-            <div className="space-y-1">
-              <Label
-                htmlFor="auth-email"
-                className="text-xs font-black uppercase tracking-widest text-muted-foreground"
-              >
-                Email *
-              </Label>
-              <Input
-                id="auth-email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={busy}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label
-                htmlFor="auth-password"
-                className="text-xs font-black uppercase tracking-widest text-muted-foreground"
-              >
-                Password *
-              </Label>
-              <Input
-                id="auth-password"
-                type="password"
-
-
-
-
-                onChange={(e) => setPw(e.target.value)}
-                disabled={busy}
-              />
-            <div className="space-y-1">
-              <Label htmlFor="auth-department" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Department *</Label>
-              <Input id="auth-department" type="text" value={department} onChange={(e) => setDepartment(e.target.value)} disabled={busy} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="auth-employee-id" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Employee ID *</Label>
-              <Input id="auth-employee-id" type="text" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} disabled={busy} />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {mode === "in" ? "Sign in" : "Create account"}
-            </Button>
-          </form>
-        ) : null}
-
-        {message ? (
-          <div
-            role="alert"
-            className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
-          >
-            {message}
-          </div>
-        ) : null}
-
-        {import.meta.env.VITE_PMS11_DEMO_MODE === "false" ? (
-          <button
-            type="button"
-            className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              setMessage("");
-              setMode((current) => (current === "in" ? "up" : "in"));
-            }}
-            disabled={busy}
-          >
-            {mode === "in"
-              ? "No account? Create one"
-              : "Have an account? Sign in"}
-          </button>
-        ) : null}
-      </div>
+  return <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="maritime-card w-full max-w-md space-y-6 p-7">
+      <div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Anchor className="h-6 w-6"/></span><div><h1 className="font-display text-2xl font-semibold">PMS 11 Closure Loop</h1><p className="label-caps">Corporate Access · @pms.eg</p></div></div>
+      {!firstLogin && !activationPending && <form onSubmit={submitEmail} className="space-y-4"><div className="space-y-1"><Label htmlFor="email">Business Email</Label><Input id="email" type="email" required autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} disabled={busy}/></div><Button className="w-full" disabled={busy}>{busy?<Loader2 className="h-4 w-4 animate-spin"/>:null}Continue</Button><p className="text-xs text-muted-foreground">Accounts are provisioned by PMS administration. New accounts do not use email verification.</p></form>}
+      {!firstLogin && !activationPending && password.length>0 && null}
+      {!firstLogin && !activationPending && <form onSubmit={signIn} className="space-y-3 border-t pt-4"><div className="space-y-1"><Label htmlFor="signin-password">Password</Label><Input id="signin-password" type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} disabled={busy}/></div><Button type="submit" variant="outline" className="w-full" disabled={busy}>Sign in with existing password</Button></form>}
+      {firstLogin && <form onSubmit={setNewPassword} className="space-y-4"><div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"><b>First login</b><p className="mt-1 text-xs text-muted-foreground">Welcome to PMS 11 Closure Loop. Create your secure password now. No email verification is required.</p></div><div className="space-y-1"><Label htmlFor="new-password">New Password</Label><Input id="new-password" type="password" autoComplete="new-password" minLength={8} required value={password} onChange={e=>setPassword(e.target.value)} disabled={busy}/></div><div className="space-y-1"><Label htmlFor="confirm-password">Confirm Password</Label><Input id="confirm-password" type="password" autoComplete="new-password" minLength={8} required value={confirm} onChange={e=>setConfirm(e.target.value)} disabled={busy}/></div><Button className="w-full" disabled={busy}>{busy?<Loader2 className="h-4 w-4 animate-spin"/>:null}Set Password & Enter Command Center</Button></form>}
+      {activationPending&&<p className="text-sm text-muted-foreground">Activating your first-login session…</p>}
+      {message&&<div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{message}</div>}
     </div>
-  );
+  </div>;
 }
