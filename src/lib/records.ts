@@ -8,9 +8,29 @@ export type Rec = Tables<"records"> & { department?: string | null };
 export const VESSEL = "PMS 11";
 
 export const ENTITY_LABEL: Record<string, string> = {
-  rule: "Rule", wps: "Work Package", activity: "Activity", task: "Task", deliverable: "Deliverable", gap: "Gap / Finding",
-  acceptance: "Acceptance Criterion", evidence: "Evidence", gate: "Gate", responsibility: "Responsibility", risk: "Risk",
-  change: "Change", equipment: "Equipment",
+  rule: "Rule",
+  wps: "Work Package",
+  activity: "Activity",
+  task: "Task",
+  deliverable: "Deliverable",
+  gap: "Gap / Finding",
+  acceptance: "Acceptance Criterion",
+  evidence: "Evidence",
+  gate: "Gate",
+  responsibility: "Responsibility",
+  risk: "Risk",
+  change: "Change",
+  equipment: "Equipment",
+  // New entities for crew and safety sheets
+  crew_role: "Crew Role",
+  crew_requirement: "Crew Requirement",
+  crew_member: "Crew Member",
+  crew_certificate: "Crew Certificate",
+  manning_plan: "Manning Plan",
+  helideck_check: "Helideck Check",
+  accommodation_check: "Accommodation Check",
+  dependency: "Dependency",
+  source: "Source",
 };
 
 // Closable entities obey the closure rule enforced in the database.
